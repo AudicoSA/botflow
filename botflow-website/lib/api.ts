@@ -25,10 +25,16 @@ class ApiClient {
     }
 
     private async request(endpoint: string, options: RequestInit = {}) {
-        const headers: HeadersInit = {
+        const headers: Record<string, string> = {
             'Content-Type': 'application/json',
-            ...options.headers,
         };
+
+        // Merge existing headers if any
+        if (options.headers) {
+            Object.entries(options.headers as Record<string, string>).forEach(([key, value]) => {
+                headers[key] = value;
+            });
+        }
 
         if (this.token) {
             headers['Authorization'] = `Bearer ${this.token}`;
