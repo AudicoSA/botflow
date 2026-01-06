@@ -76,10 +76,10 @@ class BirdService {
                 throw new Error(`Bird API error: ${response.status}`);
             }
 
-            const data = await response.json();
+            const data: any = await response.json();
             logger.info({ messageId: data.id }, 'Message sent via Bird');
 
-            return data;
+            return data as BirdMessageResponse;
         } catch (error) {
             logger.error({ error }, 'Failed to send message via Bird');
             throw error;

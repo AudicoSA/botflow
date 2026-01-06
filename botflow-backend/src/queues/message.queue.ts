@@ -10,10 +10,10 @@ const openai = new OpenAI({
     apiKey: env.OPENAI_API_KEY,
 });
 
-// Message processing queue
-export const messageQueue = new Queue('message-processing', {
-    connection: redis,
-});
+// Message processing queue - only if Redis is available
+export const messageQueue = redis ? new Queue('message-processing', {
+    connection: redis as any,
+}) : null;
 
 // Job data interface
 interface MessageJob {
@@ -24,8 +24,8 @@ interface MessageJob {
     whatsappAccountId: string;
 }
 
-// Process incoming messages
-const messageWorker = new Worker<MessageJob>(
+// Process incoming messages - only if Redis is available
+const messageWorker = redis ? new Worker<MessageJob>(
     'message-processing',
     async (job: Job<MessageJob>) => {
         const { conversationId, messageContent, customerPhone, whatsappAccountId } = job.data;
@@ -62,9 +62,9 @@ const messageWorker = new Worker<MessageJob>(
                 .order('created_at', { ascending: true })
                 .limit(10);
 
-            const conversationHistory = messages?.map((msg) => ({
-                role: msg.direction === 'inbound' ? 'user' : 'assistant',
-                content: msg.content,
+            const conversationHistory = messages?.map((msg): { role: 'user' | 'assistant'; content: string } => ({
+                role: msg.direction === 'inbound' ? 'user' as const : 'assistant' as const,
+                content: msg.content || '',
             })) || [];
 
             // 4. Generate AI response based on bot type
@@ -96,9 +96,9 @@ Ask for their order number and provide status updates.`;
                 model: bot.ai_model || 'gpt-4o',
                 temperature: bot.ai_temperature || 0.7,
                 messages: [
-                    { role: 'system', content: systemPrompt },
+                    { role: 'system' as const, content: systemPrompt },
                     ...conversationHistory,
-                    { role: 'user', content: messageContent },
+                    { role: 'user' as const, content: messageContent },
                 ],
             });
 
@@ -158,17 +158,19 @@ Ask for their order number and provide status updates.`;
         }
     },
     {
-        connection: redis,
+        connection: redis as any,
         concurrency: 5,
     }
-);
+) : null;
 
-messageWorker.on('completed', (job) => {
-    logger.info({ jobId: job.id }, 'Message job completed');
-});
+if (messageWorker) {
+    messageWorker.on('completed', (job) => {
+        logger.info({ jobId: job.id }, 'Message job completed');
+    });
 
-messageWorker.on('failed', (job, err) => {
-    logger.error({ jobId: job?.id, error: err }, 'Message job failed');
-});
+    messageWorker.on('failed', (job, err) => {
+        logger.error({ jobId: job?.id, error: err }, 'Message job failed');
+    });
+}
 
 export { messageWorker };

@@ -124,7 +124,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     fastify.get('/me', {
         onRequest: [fastify.authenticate],
     }, async (request, reply) => {
-        const decoded = await request.jwtVerify();
+        const decoded: any = await request.jwtVerify();
 
         const { data: userData } = await supabase.auth.getUser(decoded.userId);
 
