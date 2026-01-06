@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { supabase } from '../config/supabase.js';
+import { supabase, supabaseAdmin } from '../config/supabase.js';
 
 const signupSchema = z.object({
     email: z.string().email(),
@@ -41,7 +41,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         }
 
         // Create organization
-        const { data: orgData, error: orgError } = await supabase
+        const { data: orgData, error: orgError } = await supabaseAdmin
             .from('organizations')
             .insert({
                 name: body.organizationName,
@@ -58,7 +58,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         }
 
         // Add user as organization owner
-        await supabase.from('organization_members').insert({
+        await supabaseAdmin.from('organization_members').insert({
             organization_id: orgData.id,
             user_id: authData.user.id,
             role: 'owner',
