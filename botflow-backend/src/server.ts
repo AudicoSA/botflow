@@ -33,6 +33,11 @@ await fastify.register(cors, {
             return cb(null, true);
         }
 
+        // Allow Vercel frontend
+        if (origin === 'https://botflow-two.vercel.app' || origin.includes('botflow-two.vercel.app')) {
+            return cb(null, true);
+        }
+
         // Allow configured frontend URL
         if (origin === env.FRONTEND_URL) {
             return cb(null, true);
