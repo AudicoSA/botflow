@@ -28,7 +28,7 @@ async function test() {
         console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
         if (response.ok) {
-            const data = await response.json();
+            const data: any = await response.json();
             console.log('\n✅ Connection successful!');
             console.log('Workflows found:', data.data?.length || 0);
         } else {

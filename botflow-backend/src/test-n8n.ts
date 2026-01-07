@@ -18,7 +18,7 @@ async function testN8nConnection() {
     const n8nClient = new N8nClient({
         baseUrl: process.env.N8N_API_URL || 'https://botflowsa.app.n8n.cloud/api/v1',
         apiKey: process.env.N8N_API_KEY || '',
-        logger,
+        logger: logger as any,
     });
 
     try {
