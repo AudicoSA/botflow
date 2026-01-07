@@ -54,7 +54,23 @@ export default async function botRoutes(fastify: FastifyInstance) {
         // onRequest: [fastify.authenticate],
     }, async (request, reply) => {
         // Temporarily use a test user ID until auth is implemented
-        const userId = 'test-user-123'; // (request.user as any).id;
+        let userId = (request.user as any)?.id;
+
+        // In development, if no user is authenticated, use/create a dev user
+        if (!userId && process.env.NODE_ENV === 'development') {
+            try {
+                const { getDevUser } = await import('../utils/dev-user.js');
+                const devUser = await getDevUser(fastify.log);
+                userId = devUser.id;
+            } catch (error) {
+                fastify.log.error(error, 'Failed to get dev user');
+                return reply.code(500).send({ error: 'Failed to initialize dev user' });
+            }
+        }
+
+        if (!userId) {
+            return reply.code(401).send({ error: 'Unauthorized' });
+        }
 
         // Validate request body
         const validation = createBotSchema.safeParse(request.body);

@@ -191,7 +191,11 @@ export class N8nClient {
 
             return await response.json();
         } catch (error) {
-            this.logger.error({ error, webhookPath }, 'Error executing n8n workflow');
+            // Enhanced error logging
+            this.logger.error({
+                error: error instanceof Error ? { message: error.message, stack: error.stack } : error,
+                webhookPath
+            }, 'Error executing n8n workflow');
             throw error;
         }
     }
