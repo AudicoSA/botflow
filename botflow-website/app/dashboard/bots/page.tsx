@@ -73,9 +73,9 @@ export default function BotsPage() {
                     <h2 className="text-2xl font-bold text-gray-900">Your Bots</h2>
                     <p className="text-gray-600 mt-1">Manage your AI assistants</p>
                 </div>
-                <button className="px-4 py-2 gradient-bg text-white rounded-lg font-semibold hover:shadow-lg transition-all">
+                <Link href="/dashboard/bots/create" className="px-4 py-2 gradient-bg text-white rounded-lg font-semibold hover:shadow-lg transition-all">
                     + Create Bot
-                </button>
+                </Link>
             </div>
 
             {/* Active Bots */}

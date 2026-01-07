@@ -1,0 +1,77 @@
+# n8n Docker Compose Configuration
+# Self-hosted n8n instance for BotFlow integration
+
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: botflow-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # Basic Configuration
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=BotFlow2026SecurePassword
+      
+      # API Configuration
+      - N8N_API_KEY_AUTH_ENABLED=true
+      
+      # Database (PostgreSQL via Supabase or local)
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=${DB_HOST:-localhost}
+      - DB_POSTGRESDB_PORT=${DB_PORT:-5432}
+      - DB_POSTGRESDB_DATABASE=${DB_NAME:-n8n}
+      - DB_POSTGRESDB_USER=${DB_USER:-n8n}
+      - DB_POSTGRESDB_PASSWORD=${DB_PASSWORD:-n8n_password}
+      
+      # Webhook Configuration
+      - WEBHOOK_URL=http://localhost:5678/
+      - N8N_PROTOCOL=http
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      
+      # Execution
+      - EXECUTIONS_MODE=regular
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+      - EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
+      
+      # Timezone
+      - GENERIC_TIMEZONE=Africa/Johannesburg
+      
+      # Logging
+      - N8N_LOG_LEVEL=info
+      
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n-custom-nodes:/home/node/.n8n/custom
+    
+    networks:
+      - botflow-network
+
+  # Optional: PostgreSQL for n8n (if not using Supabase)
+  # n8n-postgres:
+  #   image: postgres:15-alpine
+  #   container_name: botflow-n8n-postgres
+  #   restart: unless-stopped
+  #   environment:
+  #     - POSTGRES_USER=n8n
+  #     - POSTGRES_PASSWORD=n8n_password
+  #     - POSTGRES_DB=n8n
+  #   volumes:
+  #     - n8n_postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - botflow-network
+
+volumes:
+  n8n_data:
+    driver: local
+  # n8n_postgres_data:
+  #   driver: local
+
+networks:
+  botflow-network:
+    driver: bridge
