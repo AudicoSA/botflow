@@ -90,9 +90,13 @@ export default function CreateBotPage() {
 
         setLoading(true);
         try {
-            const response = await fetch('/api/bots', {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+            const response = await fetch(`${apiUrl}/api/bots`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    // TODO: Add auth token when auth is implemented
+                },
                 body: JSON.stringify({
                     templateId: selectedTemplate,
                     config: botConfig,
