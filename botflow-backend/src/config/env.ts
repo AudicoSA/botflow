@@ -19,9 +19,9 @@ const envSchema = z.object({
     // OpenAI
     OPENAI_API_KEY: z.string(),
 
-    // Redis
-    REDIS_HOST: z.string().default('localhost'),
-    REDIS_PORT: z.string().default('6379'),
+    // Redis (optional - only needed for message queue)
+    REDIS_HOST: z.string().optional(),
+    REDIS_PORT: z.string().optional(),
     REDIS_PASSWORD: z.string().optional(),
 
     // Stripe
