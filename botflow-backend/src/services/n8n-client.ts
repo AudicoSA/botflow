@@ -71,7 +71,7 @@ export class N8nClient {
                 throw new Error(`Failed to create workflow: ${error}`);
             }
 
-            const result = await response.json();
+            const result = await response.json() as any;
             this.logger.info({ workflowId: result.id }, 'Created n8n workflow');
             return result;
         } catch (error) {
@@ -99,9 +99,9 @@ export class N8nClient {
                 throw new Error(`Failed to update workflow: ${error}`);
             }
 
-            const result = await response.json();
+            const result = await response.json() as any;
             this.logger.info({ workflowId }, 'Updated n8n workflow');
-            return result;
+            return result as N8nWorkflow;
         } catch (error) {
             this.logger.error({ error, workflowId }, 'Error updating n8n workflow');
             throw error;
@@ -124,7 +124,7 @@ export class N8nClient {
                 throw new Error(`Failed to get workflow: ${error}`);
             }
 
-            return await response.json();
+            return await response.json() as any as N8nWorkflow;
         } catch (error) {
             this.logger.error({ error, workflowId }, 'Error getting n8n workflow');
             throw error;
@@ -215,7 +215,7 @@ export class N8nClient {
                 throw new Error(`Failed to get executions: ${error}`);
             }
 
-            const result = await response.json();
+            const result = await response.json() as any;
             return result.data || [];
         } catch (error) {
             this.logger.error({ error, workflowId }, 'Error getting n8n executions');
@@ -242,9 +242,9 @@ export class N8nClient {
                 throw new Error(`Failed to create credential: ${error}`);
             }
 
-            const result = await response.json();
+            const result = await response.json() as any;
             this.logger.info({ credentialId: result.id }, 'Created n8n credential');
-            return result;
+            return result as N8nCredential;
         } catch (error) {
             this.logger.error({ error }, 'Error creating n8n credential');
             throw error;

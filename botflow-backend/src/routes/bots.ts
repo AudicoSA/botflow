@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { WorkflowGenerator } from '../services/workflow-generator.js';
 import { N8nClient } from '../services/n8n-client.js';
+import { supabaseAdmin } from '../config/supabase.js';
 
 const createBotSchema = z.object({
     templateId: z.string(),
@@ -33,7 +34,7 @@ export default async function botRoutes(fastify: FastifyInstance) {
     }, async (request, reply) => {
         const userId = (request.user as any).id;
 
-        const { data: bots, error } = await fastify.supabase
+        const { data: bots, error } = await supabaseAdmin
             .from('bots')
             .select('*')
             .eq('user_id', userId)
@@ -82,7 +83,7 @@ export default async function botRoutes(fastify: FastifyInstance) {
             });
 
             // Create bot record in database
-            const { data: bot, error: botError } = await fastify.supabase
+            const { data: bot, error: botError } = await supabaseAdmin
                 .from('bots')
                 .insert({
                     id: botId,
@@ -108,7 +109,7 @@ export default async function botRoutes(fastify: FastifyInstance) {
             }
 
             // Create bot_workflows record
-            const { error: workflowError } = await fastify.supabase
+            const { error: workflowError } = await supabaseAdmin
                 .from('bot_workflows')
                 .insert({
                     bot_id: botId,
@@ -151,7 +152,7 @@ export default async function botRoutes(fastify: FastifyInstance) {
         const userId = (request.user as any).id;
         const { id } = request.params as { id: string };
 
-        const { data: bot, error } = await fastify.supabase
+        const { data: bot, error } = await supabaseAdmin
             .from('bots')
             .select('*, bot_workflows(*)')
             .eq('id', id)
@@ -173,7 +174,7 @@ export default async function botRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string };
         const updates = request.body as any;
 
-        const { data: bot, error } = await fastify.supabase
+        const { data: bot, error } = await supabaseAdmin
             .from('bots')
             .update(updates)
             .eq('id', id)
@@ -197,7 +198,7 @@ export default async function botRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string };
 
         // Get bot workflow to delete from n8n
-        const { data: botWorkflow } = await fastify.supabase
+        const { data: botWorkflow } = await supabaseAdmin
             .from('bot_workflows')
             .select('n8n_workflow_id')
             .eq('bot_id', id)
@@ -214,7 +215,7 @@ export default async function botRoutes(fastify: FastifyInstance) {
         }
 
         // Delete bot (cascade will delete bot_workflows)
-        const { error } = await fastify.supabase
+        const { error } = await supabaseAdmin
             .from('bots')
             .delete()
             .eq('id', id)
