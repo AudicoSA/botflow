@@ -24,6 +24,11 @@ const envSchema = z.object({
     REDIS_PORT: z.string().optional(),
     REDIS_PASSWORD: z.string().optional(),
 
+    // n8n
+    N8N_API_URL: z.string().url(),
+    N8N_API_KEY: z.string(),
+    N8N_WEBHOOK_URL: z.string().url(),
+
     // Stripe
     STRIPE_SECRET_KEY: z.string(),
     STRIPE_WEBHOOK_SECRET: z.string(),

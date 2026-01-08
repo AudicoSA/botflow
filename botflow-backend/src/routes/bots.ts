@@ -14,18 +14,20 @@ const createBotSchema = z.object({
     }),
 });
 
+import { env } from '../config/env.js';
+
 export default async function botRoutes(fastify: FastifyInstance) {
     // Initialize n8n client and workflow generator
     const n8nClient = new N8nClient({
-        baseUrl: process.env.N8N_API_URL!,
-        apiKey: process.env.N8N_API_KEY!,
+        baseUrl: env.N8N_API_URL,
+        apiKey: env.N8N_API_KEY,
         logger: fastify.log,
     });
 
     const workflowGenerator = new WorkflowGenerator({
         n8nClient,
         logger: fastify.log,
-        webhookBaseUrl: process.env.N8N_WEBHOOK_URL!,
+        webhookBaseUrl: env.N8N_WEBHOOK_URL,
     });
 
     // List bots
