@@ -156,9 +156,14 @@ export default async function botRoutes(fastify: FastifyInstance) {
             };
         } catch (error) {
             fastify.log.error(error);
+            // DEBUG: Return full error details to identifying the issue
             return reply.code(500).send({
                 error: 'Failed to create bot',
-                message: error instanceof Error ? error.message : 'Unknown error',
+                details: error instanceof Error ? error.message : 'Unknown error',
+                params: {
+                    n8nUrl: process.env.N8N_API_URL,
+                    hasN8nKey: !!process.env.N8N_API_KEY
+                }
             });
         }
     });
