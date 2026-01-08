@@ -11,12 +11,12 @@ export default function Navigation() {
 
                     {/* Logo Section */}
                     <Link href="/" className="flex items-center gap-3 group">
-                        <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-md group-hover:scale-105 transition-transform duration-300">
+                        <div className="relative w-40 h-12 hover:scale-105 transition-transform duration-300">
                             <Image
-                                src="/logo.png"
+                                src="/logo_v2.png"
                                 alt="BotFlow Logo"
                                 fill
-                                className="object-cover"
+                                className="object-contain object-left"
                             />
                         </div>
                     </Link>
