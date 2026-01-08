@@ -107,7 +107,10 @@ export default function CreateBotPage() {
                 const data = await response.json();
                 router.push(`/dashboard/bots/${data.id}`);
             } else {
-                alert('Failed to create bot. Please try again.');
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.error || 'Failed to create bot';
+                const details = errorData.details || errorData.message || 'Please try again.';
+                alert(`Error: ${errorMessage}\nDetails: ${details}`);
             }
         } catch (error) {
             console.error('Error creating bot:', error);
