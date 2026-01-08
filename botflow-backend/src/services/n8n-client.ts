@@ -57,13 +57,17 @@ export class N8nClient {
      */
     async createWorkflow(workflow: N8nWorkflow): Promise<N8nWorkflow> {
         try {
+            // Create a copy and remove active property as it's read-only on creation
+            const workflowPayload = { ...workflow };
+            delete workflowPayload.active;
+
             const response = await fetch(`${this.baseUrl}/workflows`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-N8N-API-KEY': this.apiKey,
                 },
-                body: JSON.stringify(workflow),
+                body: JSON.stringify(workflowPayload),
             });
 
             if (!response.ok) {
@@ -158,15 +162,51 @@ export class N8nClient {
     /**
      * Activate a workflow
      */
-    async activateWorkflow(workflowId: string): Promise<N8nWorkflow> {
-        return this.updateWorkflow(workflowId, { active: true });
+    async activateWorkflow(workflowId: string): Promise<boolean> {
+        try {
+            const response = await fetch(`${this.baseUrl}/workflows/${workflowId}/activate`, {
+                method: 'POST',
+                headers: {
+                    'X-N8N-API-KEY': this.apiKey,
+                },
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`Failed to activate workflow: ${error}`);
+            }
+
+            this.logger.info({ workflowId }, 'Activated n8n workflow');
+            return true;
+        } catch (error) {
+            this.logger.error({ error, workflowId }, 'Error activating n8n workflow');
+            throw error;
+        }
     }
 
     /**
      * Deactivate a workflow
      */
-    async deactivateWorkflow(workflowId: string): Promise<N8nWorkflow> {
-        return this.updateWorkflow(workflowId, { active: false });
+    async deactivateWorkflow(workflowId: string): Promise<boolean> {
+        try {
+            const response = await fetch(`${this.baseUrl}/workflows/${workflowId}/deactivate`, {
+                method: 'POST',
+                headers: {
+                    'X-N8N-API-KEY': this.apiKey,
+                },
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`Failed to deactivate workflow: ${error}`);
+            }
+
+            this.logger.info({ workflowId }, 'Deactivated n8n workflow');
+            return true;
+        } catch (error) {
+            this.logger.error({ error, workflowId }, 'Error deactivating n8n workflow');
+            throw error;
+        }
     }
 
     /**
