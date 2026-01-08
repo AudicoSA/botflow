@@ -41,29 +41,41 @@ export class WorkflowGenerator {
         let workflow: N8nWorkflow;
 
         switch (templateId) {
+            case 'booking':
             case 'booking_bot':
                 workflow = this.generateBookingBotWorkflow(userId, botId, config);
                 break;
+            case 'transport':
             case 'transport_bot':
+            case 'order_tracking': // Mapping order_tracking to transport logic for now or generic
                 workflow = this.generateTransportBotWorkflow(userId, botId, config);
                 break;
+            case 'restaurant':
             case 'restaurant_bot':
                 workflow = this.generateRestaurantBotWorkflow(userId, botId, config);
                 break;
+            case 'lead_gen':
+            case 'lead_generation':
             case 'lead_gen_bot':
                 workflow = this.generateLeadGenBotWorkflow(userId, botId, config);
                 break;
+            case 'ecommerce':
             case 'ecommerce_bot':
                 workflow = this.generateEcommerceBotWorkflow(userId, botId, config);
                 break;
+            case 'support':
+            case 'faq':
             case 'support_bot':
                 workflow = this.generateSupportBotWorkflow(userId, botId, config);
                 break;
+            case 'survey':
             case 'survey_bot':
                 workflow = this.generateSurveyBotWorkflow(userId, botId, config);
                 break;
             default:
-                throw new Error(`Unknown template: ${templateId}`);
+                // Fallback to lead gen for unknown types to prevent crash, but log it
+                this.logger.warn({ templateId }, 'Unknown template ID, falling back to Lead Gen');
+                workflow = this.generateLeadGenBotWorkflow(userId, botId, config);
         }
 
         // Create workflow in n8n

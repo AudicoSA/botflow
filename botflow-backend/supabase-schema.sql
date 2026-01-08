@@ -60,8 +60,9 @@ CREATE TABLE whatsapp_accounts (
 
 CREATE TABLE bots (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE NOT NULL,
-  whatsapp_account_id UUID REFERENCES whatsapp_accounts(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES auth.users(id),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  whatsapp_account_id UUID REFERENCES whatsapp_accounts(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
   task_type TEXT NOT NULL CHECK (task_type IN ('booking', 'order_tracking', 'faq', 'lead_generation', 'custom')),
@@ -78,7 +79,12 @@ CREATE TABLE bots (
 CREATE TABLE bot_workflows (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   bot_id UUID REFERENCES bots(id) ON DELETE CASCADE NOT NULL,
-  name TEXT NOT NULL,
+  name TEXT,
+  n8n_workflow_id TEXT,
+  n8n_webhook_path TEXT,
+  n8n_webhook_url TEXT,
+  workflow_config JSONB DEFAULT '{}',
+  template_id TEXT,
   nodes JSONB NOT NULL DEFAULT '[]',
   edges JSONB NOT NULL DEFAULT '[]',
   is_published BOOLEAN DEFAULT false,

@@ -95,15 +95,18 @@ export default async function webhookRoutes(fastify: FastifyInstance) {
                     .single();
 
                 // Queue message for AI processing
-                await messageQueue.add('process-message', {
-                    conversationId: conversation!.id,
-                    messageId: savedMessage!.id,
-                    customerPhone,
-                    messageContent,
-                    whatsappAccountId: whatsappAccount.id,
-                });
-
-                logger.info({ conversationId: conversation!.id }, 'Message queued for processing');
+                try {
+                    await messageQueue.add('process-message', {
+                        conversationId: conversation!.id,
+                        messageId: savedMessage!.id,
+                        customerPhone,
+                        messageContent,
+                        whatsappAccountId: whatsappAccount.id,
+                    });
+                    logger.info({ conversationId: conversation!.id }, 'Message queued for processing');
+                } catch (queueError) {
+                    logger.warn({ error: queueError, conversationId: conversation!.id }, 'Failed to queue message (Redis likely down). Message saved but AI will not reply.');
+                }
             }
 
             return { status: 'ok' };
