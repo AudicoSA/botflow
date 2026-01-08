@@ -1,38 +1,31 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function BotsPage() {
-    const [bots, setBots] = useState([
-        {
-            id: '1',
-            name: 'Booking Assistant',
-            type: 'booking',
-            status: 'active',
-            conversations: 234,
-            responseTime: '1.2s',
-            satisfaction: 96,
-        },
-        {
-            id: '2',
-            name: 'FAQ Bot',
-            type: 'faq',
-            status: 'active',
-            conversations: 567,
-            responseTime: '0.8s',
-            satisfaction: 94,
-        },
-        {
-            id: '3',
-            name: 'Order Tracking',
-            type: 'order_tracking',
-            status: 'inactive',
-            conversations: 89,
-            responseTime: '1.5s',
-            satisfaction: 92,
-        },
-    ]);
+    const [bots, setBots] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchBots = async () => {
+        try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+            const response = await fetch(`${apiUrl}/api/bots`);
+            if (response.ok) {
+                const data = await response.json();
+                setBots(data.bots || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch bots:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Load bots on mount
+    useEffect(() => {
+        fetchBots();
+    }, []);
 
     const botTemplates = [
         {

@@ -105,7 +105,8 @@ export default function CreateBotPage() {
 
             if (response.ok) {
                 const data = await response.json();
-                router.push(`/dashboard/bots/${data.id}`);
+                alert(`Bot "${data.name || 'New Bot'}" created successfully!`);
+                router.push('/dashboard/bots');
             } else {
                 const errorData = await response.json().catch(() => ({}));
                 const errorMessage = errorData.error || 'Failed to create bot';
