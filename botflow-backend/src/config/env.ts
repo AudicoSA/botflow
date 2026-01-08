@@ -25,9 +25,9 @@ const envSchema = z.object({
     REDIS_PASSWORD: z.string().optional(),
 
     // n8n
-    N8N_API_URL: z.string().url(),
-    N8N_API_KEY: z.string(),
-    N8N_WEBHOOK_URL: z.string().url(),
+    N8N_API_URL: z.string().url().optional(),
+    N8N_API_KEY: z.string().optional(),
+    N8N_WEBHOOK_URL: z.string().url().optional(),
 
     // Stripe
     STRIPE_SECRET_KEY: z.string(),
