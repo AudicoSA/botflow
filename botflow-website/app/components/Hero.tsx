@@ -16,7 +16,7 @@ export default function Hero() {
                     priority
                 />
                 {/* Gradient Overlay for Text Readability */}
-                <div className="absolute inset-0 bg-gradient-to-r from-teal-900/90 via-teal-900/40 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-teal-900/95 via-teal-900/70 to-transparent"></div>
             </div>
 
             <div className="container mx-auto px-6 relative z-10">
