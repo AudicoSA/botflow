@@ -239,7 +239,7 @@ return {
             name: `Booking Bot - ${botId}`,
             nodes,
             connections,
-            active: false,
+
             settings: {
                 executionOrder: 'v1',
             },
@@ -316,7 +316,7 @@ return {
             name: `Lead Gen Bot - ${botId}`,
             nodes,
             connections,
-            active: false,
+
             settings: {
                 executionOrder: 'v1',
             },
@@ -430,7 +430,7 @@ return {
             name: `Transport Bot - ${botId}`,
             nodes,
             connections,
-            active: false,
+
             settings: {
                 executionOrder: 'v1',
             },
