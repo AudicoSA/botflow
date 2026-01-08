@@ -11,9 +11,9 @@ export default function Navigation() {
 
                     {/* Logo Section */}
                     <Link href="/" className="flex items-center gap-3 group">
-                        <div className="relative w-40 h-12 hover:scale-105 transition-transform duration-300">
+                        <div className="relative w-auto h-20 min-w-[200px] hover:scale-105 transition-transform duration-300">
                             <Image
-                                src="/logo_v2.png"
+                                src="/logo.png"
                                 alt="BotFlow Logo"
                                 fill
                                 className="object-contain object-left"
@@ -35,7 +35,7 @@ export default function Navigation() {
 
                         <Link
                             href="#waitlist"
-                            className="px-6 py-2.5 bg-surf-DEFAULT hover:bg-surf-dark text-white rounded-xl font-semibold shadow-lg hover:shadow-surf-light/50 hover:-translate-y-0.5 transition-all"
+                            className="px-6 py-2.5 bg-black hover:bg-gray-800 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all"
                         >
                             Join Waitlist
                         </Link>

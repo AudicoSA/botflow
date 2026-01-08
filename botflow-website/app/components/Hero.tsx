@@ -9,14 +9,14 @@ export default function Hero() {
             {/* Background Wave Image */}
             <div className="absolute inset-0 z-0">
                 <Image
-                    src="/hero-wave.png"
+                    src="/hero-wave-new.jpg"
                     alt="Tropical Wave Background"
                     fill
                     className="object-cover object-center"
                     priority
                 />
                 {/* Gradient Overlay for Text Readability - Darkened as requested */}
-                <div className="absolute inset-0 bg-gradient-to-r from-teal-900/95 via-teal-900/70 to-transparent"></div>
+                <div className="absolute inset-0 bg-black/40"></div>
             </div>
 
             <div className="container mx-auto px-6 relative z-10">
@@ -141,7 +141,7 @@ export default function Hero() {
             </div>
 
             {/* Bottom Fade */}
-            <div className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-white to-transparent z-20"></div>
+            <div className="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-t from-white to-transparent z-20"></div>
         </section>
     );
 }
