@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Image from 'next/image';
 
 export default function DashboardLayout({
     children,
@@ -30,10 +31,14 @@ export default function DashboardLayout({
                     <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200">
                         {sidebarOpen && (
                             <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-blue to-primary-cyan flex items-center justify-center">
-                                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                    </svg>
+                                <div className="relative w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                                    <Image
+                                        src="/logo.png"
+                                        alt="BotFlow Logo"
+                                        fill
+                                        className="object-contain"
+                                        priority
+                                    />
                                 </div>
                                 <span className="text-lg font-bold">BotFlow</span>
                             </div>
@@ -57,8 +62,8 @@ export default function DashboardLayout({
                                     key={item.name}
                                     href={item.href}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
-                                            ? 'bg-primary-blue text-white'
-                                            : 'text-gray-700 hover:bg-gray-100'
+                                        ? 'bg-primary-blue text-white'
+                                        : 'text-gray-700 hover:bg-gray-100'
                                         }`}
                                 >
                                     <span className="text-xl">{item.icon}</span>
