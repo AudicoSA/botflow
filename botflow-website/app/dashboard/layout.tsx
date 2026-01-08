@@ -40,7 +40,6 @@ export default function DashboardLayout({
                                         priority
                                     />
                                 </div>
-                                <span className="text-lg font-bold">BotFlow</span>
                             </div>
                         )}
                         <button

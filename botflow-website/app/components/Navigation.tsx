@@ -19,7 +19,6 @@ export default function Navigation() {
                                 className="object-cover"
                             />
                         </div>
-                        <span className="text-xl font-bold text-dark-navy group-hover:text-surf-dark transition-colors">BotFlow</span>
                     </Link>
 
                     {/* Desktop Navigation */}
