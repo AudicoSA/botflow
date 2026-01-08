@@ -85,6 +85,14 @@ export default async function botRoutes(fastify: FastifyInstance) {
 
         const { templateId, config } = validation.data;
 
+        // Check for n8n configuration
+        if (!env.N8N_API_URL || env.N8N_API_URL.includes('placeholder')) {
+            return reply.code(500).send({
+                error: 'Configuration Error',
+                details: 'n8n API URL is not configured in Railway variables. Please add N8N_API_URL and N8N_API_KEY.'
+            });
+        }
+
         try {
             // Generate unique bot ID
             const botId = `bot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
