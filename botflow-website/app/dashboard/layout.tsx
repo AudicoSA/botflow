@@ -31,7 +31,7 @@ export default function DashboardLayout({
                     <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200">
                         {sidebarOpen && (
                             <div className="flex items-center gap-3">
-                                <div className="relative w-auto h-12 min-w-[120px] rounded-lg flex items-center justify-start">
+                                <div className="relative w-auto h-[2.75rem] min-w-[108px] rounded-lg flex items-center justify-start">
                                     <Image
                                         src="/logo.png"
                                         alt="BotFlow Logo"

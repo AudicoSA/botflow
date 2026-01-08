@@ -11,7 +11,7 @@ export default function Navigation() {
 
                     {/* Logo Section */}
                     <Link href="/" className="flex items-center gap-3 group">
-                        <div className="relative w-auto h-20 min-w-[200px] hover:scale-105 transition-transform duration-300">
+                        <div className="relative w-auto h-[4.5rem] min-w-[180px] hover:scale-105 transition-transform duration-300">
                             <Image
                                 src="/logo.png"
                                 alt="BotFlow Logo"

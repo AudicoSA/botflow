@@ -72,7 +72,7 @@ export default function Hero() {
                             <div className="absolute inset-0 bg-surf-light/20 blur-[80px] rounded-full"></div>
 
                             {/* Phone Mockup Frame */}
-                            <div className="relative z-10 bg-gray-900 rounded-[3rem] border-8 border-gray-900 shadow-2xl w-[320px] h-[640px] mx-auto overflow-hidden ring-1 ring-white/10">
+                            <div className="relative z-10 bg-gray-900 rounded-[3rem] border-8 border-gray-900 shadow-2xl w-[288px] h-[576px] mx-auto overflow-hidden ring-1 ring-white/10">
                                 {/* Status Bar */}
                                 <div className="h-6 bg-gray-900 w-full absolute top-0 left-0 z-20 rounded-t-[2.5rem]"></div>
 
