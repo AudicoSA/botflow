@@ -317,6 +317,9 @@ return {
             nodes,
             connections,
             active: false,
+            settings: {
+                executionOrder: 'v1',
+            },
         };
     }
 
