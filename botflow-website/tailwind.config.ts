@@ -13,6 +13,23 @@ export default {
                     blue: '#0066FF',
                     cyan: '#00D4FF',
                 },
+                surf: {
+                    DEFAULT: '#00B4D8',
+                    light: '#90E0EF',
+                    dark: '#0096C7',
+                },
+                sand: {
+                    DEFAULT: '#FDF6E3',
+                    dark: '#E6DCC5',
+                },
+                sunset: {
+                    DEFAULT: '#FF9F1C',
+                    pink: '#FF99C8',
+                },
+                ocean: {
+                    DEFAULT: '#0077B6',
+                    deep: '#03045E',
+                },
                 dark: {
                     navy: '#0A1628',
                 },
