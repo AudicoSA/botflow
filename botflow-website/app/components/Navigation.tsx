@@ -1,34 +1,42 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Navigation() {
     return (
-        <nav className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md border-b border-gray-200 z-50">
+        <nav className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md border-b border-surf-light/20 z-50 transition-all duration-300">
             <div className="max-w-7xl mx-auto px-6 py-4">
                 <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-blue to-primary-cyan flex items-center justify-center">
-                            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                        </div>
-                        <span className="text-xl font-bold text-gray-900">BotFlow</span>
-                    </div>
 
+                    {/* Logo Section */}
+                    <Link href="/" className="flex items-center gap-3 group">
+                        <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-md group-hover:scale-105 transition-transform duration-300">
+                            <Image
+                                src="/logo.png"
+                                alt="BotFlow Logo"
+                                fill
+                                className="object-cover"
+                            />
+                        </div>
+                        <span className="text-xl font-bold text-dark-navy group-hover:text-surf-dark transition-colors">BotFlow</span>
+                    </Link>
+
+                    {/* Desktop Navigation */}
                     <div className="hidden md:flex items-center gap-8">
-                        <Link href="#features" className="text-gray-700 hover:text-primary-blue transition-colors font-medium">
+                        <Link href="#features" className="text-gray-600 hover:text-surf-DEFAULT transition-colors font-medium">
                             Features
                         </Link>
-                        <Link href="#pricing" className="text-gray-700 hover:text-primary-blue transition-colors font-medium">
+                        <Link href="#pricing" className="text-gray-600 hover:text-surf-DEFAULT transition-colors font-medium">
                             Pricing
                         </Link>
-                        <Link href="#contact" className="text-gray-700 hover:text-primary-blue transition-colors font-medium">
+                        <Link href="#contact" className="text-gray-600 hover:text-surf-DEFAULT transition-colors font-medium">
                             Contact
                         </Link>
+
                         <Link
                             href="#waitlist"
-                            className="px-6 py-2.5 gradient-bg text-white rounded-lg font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                            className="px-6 py-2.5 bg-surf-DEFAULT hover:bg-surf-dark text-white rounded-xl font-semibold shadow-lg hover:shadow-surf-light/50 hover:-translate-y-0.5 transition-all"
                         >
                             Join Waitlist
                         </Link>
