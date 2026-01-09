@@ -8,7 +8,7 @@ ADD COLUMN IF NOT EXISTS model_config JSONB DEFAULT '{"provider": "openai", "mod
 -- 2. Create knowledge_sources table (tracks files/urls before indexing)
 CREATE TABLE IF NOT EXISTS knowledge_sources (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  bot_id UUID REFERENCES bots(id) ON DELETE CASCADE NOT NULL,
+  bot_id TEXT REFERENCES bots(id) ON DELETE CASCADE NOT NULL, -- Changed to TEXT to match bots.id
   source_type TEXT NOT NULL CHECK (source_type IN ('file', 'url', 'text')),
   content TEXT NOT NULL, -- URL or connection string or raw text
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'indexed', 'failed')),
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS knowledge_sources (
 
 -- 3. Add bot_id to knowledge_base_articles (linking articles to specific bots)
 ALTER TABLE knowledge_base_articles
-ADD COLUMN IF NOT EXISTS bot_id UUID REFERENCES bots(id) ON DELETE CASCADE;
+ADD COLUMN IF NOT EXISTS bot_id TEXT REFERENCES bots(id) ON DELETE CASCADE; -- Changed to TEXT
 
 -- 4. Enable RLS for new table
 ALTER TABLE knowledge_sources ENABLE ROW LEVEL SECURITY;

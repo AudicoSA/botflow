@@ -266,11 +266,17 @@ export default async function botRoutes(fastify: FastifyInstance) {
         }
 
         const { id } = request.params as { id: string };
-        const updates = request.body as any;
+        const { systemPrompt, modelConfig, ...otherUpdates } = request.body as any;
+
+        const dbUpdates = {
+            ...otherUpdates,
+            ...(systemPrompt !== undefined && { system_prompt: systemPrompt }),
+            ...(modelConfig !== undefined && { model_config: modelConfig }),
+        };
 
         const { data: bot, error } = await supabaseAdmin
             .from('bots')
-            .update(updates)
+            .update(dbUpdates)
             .eq('id', id)
             .eq('user_id', userId)
             .select()
