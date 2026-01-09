@@ -34,6 +34,19 @@ export default function ConnectModal({ type, onClose, onConnect }: ConnectModalP
                 return (
                     <>
                         <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
+                            <select
+                                name="provider"
+                                className="w-full border rounded p-2"
+                                value={formData.provider || 'meta'}
+                                onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
+                            >
+                                <option value="meta">Meta (Direct)</option>
+                                <option value="bird">Bird (MessageBird)</option>
+                            </select>
+                        </div>
+
+                        <div className="mb-4">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
                             <input
                                 name="name"
@@ -43,37 +56,66 @@ export default function ConnectModal({ type, onClose, onConnect }: ConnectModalP
                                 onChange={handleChange}
                             />
                         </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Access Token</label>
-                            <input
-                                name="accessToken"
-                                required
-                                type="password"
-                                className="w-full border rounded p-2"
-                                placeholder="EAAG..."
-                                onChange={handleChange}
-                            />
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number ID</label>
-                            <input
-                                name="phoneNumberId"
-                                required
-                                className="w-full border rounded p-2"
-                                placeholder="100..."
-                                onChange={handleChange}
-                            />
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">WABA ID</label>
-                            <input
-                                name="wabaId"
-                                required
-                                className="w-full border rounded p-2"
-                                placeholder="100..."
-                                onChange={handleChange}
-                            />
-                        </div>
+
+                        {formData.provider === 'bird' ? (
+                            <>
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Access Key</label>
+                                    <input
+                                        name="accessKey"
+                                        required
+                                        type="password"
+                                        className="w-full border rounded p-2"
+                                        placeholder="Live API Key"
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Channel ID</label>
+                                    <input
+                                        name="channelId"
+                                        required
+                                        className="w-full border rounded p-2"
+                                        placeholder="UUID"
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Access Token</label>
+                                    <input
+                                        name="accessToken"
+                                        required
+                                        type="password"
+                                        className="w-full border rounded p-2"
+                                        placeholder="EAAG..."
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number ID</label>
+                                    <input
+                                        name="phoneNumberId"
+                                        required
+                                        className="w-full border rounded p-2"
+                                        placeholder="100..."
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">WABA ID</label>
+                                    <input
+                                        name="wabaId"
+                                        required
+                                        className="w-full border rounded p-2"
+                                        placeholder="100..."
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                            </>
+                        )}
                     </>
                 );
             case 'google_sheets':

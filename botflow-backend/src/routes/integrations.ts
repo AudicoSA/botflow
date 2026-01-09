@@ -75,7 +75,14 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
         // 1. Map our type to n8n credential type
         let n8nCredentialType = '';
         switch (type) {
-            case 'whatsapp': n8nCredentialType = 'whatsAppApi'; break; // Verify exact n8n name
+            case 'whatsapp':
+                // Check provider from credentials
+                if (credentials.provider === 'bird') {
+                    n8nCredentialType = 'messageBirdApi';
+                } else {
+                    n8nCredentialType = 'whatsAppApi';
+                }
+                break;
             case 'google_sheets': n8nCredentialType = 'googleSheetsGoogleApi'; break;
             case 'stripe': n8nCredentialType = 'stripeApi'; break;
             case 'openai': n8nCredentialType = 'openAiApi'; break;
