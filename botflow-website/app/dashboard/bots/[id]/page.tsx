@@ -12,11 +12,18 @@ export default function BotEditorPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [bot, setBot] = useState<any>(null);
+    const [activeTab, setActiveTab] = useState('general');
     const [formData, setFormData] = useState({
         name: '',
         description: '',
         welcomeMessage: '',
         fallbackMessage: '',
+        systemPrompt: '',
+        modelConfig: {
+            provider: 'openai',
+            model: 'gpt-4o',
+            temperature: 0.7
+        }
     });
 
     useEffect(() => {
@@ -26,13 +33,19 @@ export default function BotEditorPage() {
                 const response = await fetch(`${apiUrl}/api/bots/${botId}`);
                 if (response.ok) {
                     const data = await response.json();
-                    setBot(data.bot); // Backend returns { bot: ... } wrapping
+                    setBot(data.bot);
                     const botData = data.bot;
                     setFormData({
                         name: botData.name || '',
                         description: botData.description || '',
                         welcomeMessage: botData.config?.welcomeMessage || '',
                         fallbackMessage: botData.config?.fallbackMessage || '',
+                        systemPrompt: botData.system_prompt || '',
+                        modelConfig: botData.model_config || {
+                            provider: 'openai',
+                            model: 'gpt-4o',
+                            temperature: 0.7
+                        }
                     });
                 } else {
                     alert('Failed to load bot details');
@@ -56,10 +69,11 @@ export default function BotEditorPage() {
         try {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-            // Construct payload: update top-level columns and the config object
             const payload = {
                 name: formData.name,
                 description: formData.description,
+                systemPrompt: formData.systemPrompt,
+                modelConfig: formData.modelConfig,
                 config: {
                     ...(bot?.config || {}),
                     name: formData.name,
@@ -127,76 +141,114 @@ export default function BotEditorPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Main Settings */}
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                        <h3 className="font-bold text-gray-900 mb-4 border-b pb-2">General Settings</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Bot Name</label>
-                                <input
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-blue focus:border-transparent"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                                <textarea
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-blue focus:border-transparent"
-                                    rows={3}
-                                />
-                            </div>
-                        </div>
-                    </div>
+            {/* Tabs */}
+            <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8">
+                    {['general', 'brain', 'knowledge'].map((tab) => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`
+                                py-4 px-1 border-b-2 font-medium text-sm capitalize
+                                ${activeTab === tab
+                                    ? 'border-primary-blue text-primary-blue'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
+                            `}
+                        >
+                            {tab === 'brain' ? 'Brain & Intelligence' : tab === 'knowledge' ? 'Knowledge Base' : 'General Settings'}
+                        </button>
+                    ))}
+                </nav>
+            </div>
 
-                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                        <h3 className="font-bold text-gray-900 mb-4 border-b pb-2">Conversation Flow</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Welcome Message</label>
-                                <p className="text-xs text-gray-500 mb-2">The first message sent when a user starts a chat.</p>
-                                <textarea
-                                    value={formData.welcomeMessage}
-                                    onChange={(e) => setFormData({ ...formData, welcomeMessage: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-blue focus:border-transparent"
-                                    rows={3}
-                                />
+            {/* Tab Content */}
+            <div className="mt-6">
+                {activeTab === 'general' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 space-y-6">
+                            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                                <h3 className="font-bold text-gray-900 mb-4 border-b pb-2">General Settings</h3>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Bot Name</label>
+                                        <input
+                                            type="text"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-blue focus:border-transparent"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                                        <textarea
+                                            value={formData.description}
+                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-blue focus:border-transparent"
+                                            rows={3}
+                                        />
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Fallback Message</label>
-                                <p className="text-xs text-gray-500 mb-2">Sent when the bot doesn't understand the user's input.</p>
-                                <textarea
-                                    value={formData.fallbackMessage}
-                                    onChange={(e) => setFormData({ ...formData, fallbackMessage: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-blue focus:border-transparent"
-                                    rows={2}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                {/* Sidebar / Info */}
-                <div className="space-y-6">
-                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                        <h3 className="font-bold text-gray-900 mb-4">Bot Status</h3>
-                        <div className="flex items-center justify-between mb-4">
-                            <span className="text-gray-600">Status</span>
-                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${bot.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                                {bot.status === 'active' ? 'Active' : 'Inactive'}
-                            </span>
+                            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                                <h3 className="font-bold text-gray-900 mb-4 border-b pb-2">Conversation Flow</h3>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Welcome Message</label>
+                                        <p className="text-xs text-gray-500 mb-2">The first message sent when a user starts a chat.</p>
+                                        <textarea
+                                            value={formData.welcomeMessage}
+                                            onChange={(e) => setFormData({ ...formData, welcomeMessage: e.target.value })}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-blue focus:border-transparent"
+                                            rows={3}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Fallback Message</label>
+                                        <p className="text-xs text-gray-500 mb-2">Sent when the bot doesn't understand the user's input.</p>
+                                        <textarea
+                                            value={formData.fallbackMessage}
+                                            onChange={(e) => setFormData({ ...formData, fallbackMessage: e.target.value })}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-blue focus:border-transparent"
+                                            rows={2}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div className="text-xs text-gray-500">
-                            Created: {new Date(bot.createdAt || Date.now()).toLocaleDateString()}
+
+                        <div className="space-y-6">
+                            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                                <h3 className="font-bold text-gray-900 mb-4">Bot Status</h3>
+                                <div className="flex items-center justify-between mb-4">
+                                    <span className="text-gray-600">Status</span>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${bot.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                                        {bot.status === 'active' ? 'Active' : 'Inactive'}
+                                    </span>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                    Created: {new Date(bot.createdAt || Date.now()).toLocaleDateString()}
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
+
+                {activeTab === 'brain' && (
+                    <BrainTab
+                        systemPrompt={formData.systemPrompt}
+                        modelConfig={formData.modelConfig}
+                        onChange={(data) => setFormData({ ...formData, ...data })}
+                    />
+                )}
+
+                {activeTab === 'knowledge' && (
+                    <KnowledgeBaseTab botId={botId} />
+                )}
             </div>
         </div>
     );
 }
+
+import BrainTab from './BrainTab';
+import KnowledgeBaseTab from './KnowledgeBaseTab';

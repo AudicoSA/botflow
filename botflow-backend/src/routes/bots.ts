@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { WorkflowGenerator } from '../services/workflow-generator.js';
 import { N8nClient } from '../services/n8n-client.js';
 import { supabaseAdmin } from '../config/supabase.js';
+import { env } from '../config/env.js';
 
 const createBotSchema = z.object({
     templateId: z.string(),
@@ -12,9 +13,13 @@ const createBotSchema = z.object({
         welcomeMessage: z.string().min(1),
         fallbackMessage: z.string().optional(),
     }),
+    systemPrompt: z.string().optional(),
+    modelConfig: z.object({
+        provider: z.string().default('openai'),
+        model: z.string().default('gpt-4o'),
+        temperature: z.number().min(0).max(1).default(0.7),
+    }).optional(),
 });
-
-import { env } from '../config/env.js';
 
 export default async function botRoutes(fastify: FastifyInstance) {
     // Initialize n8n client and workflow generator with safe defaults to prevent startup crash
@@ -95,7 +100,7 @@ export default async function botRoutes(fastify: FastifyInstance) {
             });
         }
 
-        const { templateId, config } = validation.data;
+        const { templateId, config, systemPrompt, modelConfig } = validation.data;
 
         // Check for n8n configuration
         if (!env.N8N_API_URL || env.N8N_API_URL.includes('placeholder')) {
@@ -132,6 +137,8 @@ export default async function botRoutes(fastify: FastifyInstance) {
                     description: config.description || '',
                     template_id: templateId,
                     config: config,
+                    system_prompt: systemPrompt,
+                    model_config: modelConfig,
                     status: 'active',
                 })
                 .select()

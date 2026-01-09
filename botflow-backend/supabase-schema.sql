@@ -71,6 +71,8 @@ CREATE TABLE bots (
   ai_model TEXT DEFAULT 'gpt-4o',
   ai_temperature DECIMAL(2,1) DEFAULT 0.7,
   fallback_behavior TEXT DEFAULT 'human_handoff' CHECK (fallback_behavior IN ('human_handoff', 'end_conversation', 'loop')),
+  system_prompt TEXT,
+  model_config JSONB DEFAULT '{"provider": "openai", "model": "gpt-4o", "temperature": 0.7}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -152,6 +154,18 @@ CREATE TABLE knowledge_base_articles (
   tags TEXT[],
   embedding vector(1536),
   is_published BOOLEAN DEFAULT true,
+  bot_id UUID REFERENCES bots(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE knowledge_sources (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  bot_id UUID REFERENCES bots(id) ON DELETE CASCADE NOT NULL,
+  source_type TEXT NOT NULL CHECK (source_type IN ('file', 'url', 'text')),
+  content TEXT NOT NULL,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'indexed', 'failed')),
+  metadata JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
