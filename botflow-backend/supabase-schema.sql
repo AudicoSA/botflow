@@ -235,6 +235,8 @@ CREATE TABLE integrations (
   integration_type TEXT NOT NULL,
   configuration JSONB NOT NULL DEFAULT '{}',
   credentials JSONB,
+  n8n_credential_id TEXT,
+  status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'connected', 'error')),
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

@@ -100,6 +100,7 @@ fastify.setErrorHandler((error, request, reply) => {
 });
 
 import knowledgeRoutes from './routes/knowledge.js';
+import integrationRoutes from './routes/integrations.js';
 
 // Register routes
 await fastify.register(healthRoutes, { prefix: '/health' });
@@ -108,6 +109,7 @@ await fastify.register(organizationRoutes, { prefix: '/api/organizations' });
 await fastify.register(whatsappRoutes, { prefix: '/api/whatsapp' });
 await fastify.register(botRoutes, { prefix: '/api/bots' });
 await fastify.register(knowledgeRoutes, { prefix: '/api' }); // prefixes: /api/bots/:id/knowledge
+await fastify.register(integrationRoutes, { prefix: '/api/integrations' });
 await fastify.register(conversationRoutes, { prefix: '/api/conversations' });
 await fastify.register(webhookRoutes, { prefix: '/webhooks' });
 
