@@ -13,18 +13,37 @@ export default async function webhookRoutes(fastify: FastifyInstance) {
             // Bird sends different event types
             const eventType = payload.type;
 
-            if (eventType === 'message.created') {
-                const message = payload.message;
-                const contact = payload.contact;
+            if (eventType === 'message.created' || eventType === 'whatsapp.inbound') {
+                let message, contact, customerPhone, messageContent, channelId;
 
-                // Only process inbound messages
-                if (message.direction !== 'received') {
-                    return { status: 'ok', message: 'Outbound message, skipping' };
+                if (eventType === 'whatsapp.inbound') {
+                    // Normalize 'whatsapp.inbound' payload structure
+                    const data = payload.data || {};
+                    message = {
+                        id: data.id,
+                        direction: 'received', // Inbound is always received
+                        content: { text: data.content?.text || '' }
+                    };
+                    contact = {
+                        identifierValue: data.from,
+                        displayName: data.profileName || 'Unknown'
+                    };
+                    customerPhone = data.from;
+                    messageContent = data.content?.text || '';
+                    channelId = data.channelId;
+                } else {
+                    // Existing 'message.created' structure
+                    message = payload.message;
+                    contact = payload.contact;
+                    customerPhone = contact.identifierValue;
+                    messageContent = message.content?.text || '';
+                    channelId = payload.channelId;
                 }
 
-                const customerPhone = contact.identifierValue;
-                const messageContent = message.content?.text || '';
-                const channelId = payload.channelId;
+                // Only process inbound messages (double check for message.created)
+                if (message.direction !== 'received' && message.direction !== 'inbound') {
+                    return { status: 'ok', message: 'Outbound message, skipping' };
+                }
 
                 // Get WhatsApp account by Bird channel ID
                 const { data: whatsappAccount } = await supabaseAdmin

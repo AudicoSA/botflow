@@ -139,6 +139,43 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
                 return reply.code(500).send({ error: 'Failed to save integration' });
             }
 
+            // --- SYNC TO WHATSAPP_ACCOUNTS (Bridge for Webhooks) ---
+            if (type === 'whatsapp' && organizationId) {
+                // Determine Bird vs Meta
+                // For now assuming Bird if provider is set, otherwise default logic
+                const isBird = credentials.provider === 'bird';
+
+                const waUpdate = {
+                    organization_id: organizationId,
+                    phone_number: credentials.phoneNumberId || credentials.name || 'unknown', // Fallback
+                    display_name: credentials.name,
+                    status: 'active',
+                    // Meta fields
+                    ...(credentials.phoneNumberId && { phone_number_id: credentials.phoneNumberId }),
+                    ...(credentials.wabaId && { waba_id: credentials.wabaId }),
+                    // Bird fields
+                    ...(isBird && {
+                        bird_channel_id: credentials.channelId,
+                        bird_workspace_id: env.BIRD_WORKSPACE_ID || 'unknown'
+                    })
+                };
+
+                // Check if account already exists for this number/channel
+                // We'll try to find by channel_id or phone_number
+                let existingAccount = null;
+                if (isBird && credentials.channelId) {
+                    const { data } = await supabaseAdmin.from('whatsapp_accounts').select('id').eq('bird_channel_id', credentials.channelId).single();
+                    existingAccount = data;
+                }
+
+                if (existingAccount) {
+                    await supabaseAdmin.from('whatsapp_accounts').update(waUpdate).eq('id', existingAccount.id);
+                } else {
+                    await supabaseAdmin.from('whatsapp_accounts').insert(waUpdate);
+                }
+            }
+            // -------------------------------------------------------
+
             return { integration };
 
         } catch (error) {
