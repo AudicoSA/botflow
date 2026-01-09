@@ -85,7 +85,7 @@ export default function BotsPage() {
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-gray-900 text-lg">{bot.name}</h3>
-                                    <p className="text-sm text-gray-600 capitalize">{bot.type.replace('_', ' ')}</p>
+                                    <p className="text-sm text-gray-600 capitalize">{(bot.type || bot.templateId || 'custom_bot').replace(/_/g, ' ')}</p>
                                 </div>
                             </div>
 

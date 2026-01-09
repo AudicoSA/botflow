@@ -57,7 +57,7 @@ export default function Features() {
                             key={index}
                             className="group p-8 rounded-3xl bg-white/60 backdrop-blur-xl border border-white/50 shadow-sm hover:shadow-xl hover:shadow-surf-light/20 transition-all duration-300 hover:-translate-y-1"
                         >
-                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-surf-DEFAULT to-surf-dark flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-md relative overflow-hidden">
+                            <div className="w-40 h-40 rounded-2xl bg-gradient-to-br from-surf-DEFAULT to-surf-dark flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-md relative overflow-hidden">
                                 <Image
                                     src={feature.icon}
                                     alt={feature.title}
