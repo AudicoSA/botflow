@@ -2,13 +2,14 @@ import { useState } from 'react';
 
 interface ConnectModalProps {
     type: string;
+    initialData?: any;
     onClose: () => void;
     onConnect: (data: any) => Promise<void>;
 }
 
-export default function ConnectModal({ type, onClose, onConnect }: ConnectModalProps) {
+export default function ConnectModal({ type, initialData, onClose, onConnect }: ConnectModalProps) {
     const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState<Record<string, string>>({});
+    const [formData, setFormData] = useState<Record<string, string>>(initialData || {});
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -233,7 +234,7 @@ export default function ConnectModal({ type, onClose, onConnect }: ConnectModalP
                             disabled={loading}
                             className="px-4 py-2 bg-primary-blue text-white rounded-lg hover:shadow-lg disabled:opacity-50"
                         >
-                            {loading ? 'Connecting...' : 'Connect'}
+                            {loading ? 'Connecting...' : (initialData ? 'Update' : 'Connect')}
                         </button>
                     </div>
                 </form>

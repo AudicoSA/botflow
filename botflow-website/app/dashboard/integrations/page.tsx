@@ -151,14 +151,24 @@ export default function IntegrationsPage() {
                             <p className="text-gray-600 text-sm mb-4">{integration.description}</p>
 
                             <button
-                                onClick={() => !connected && setShowConnectModal(integration.id)}
-                                disabled={!!connected}
+                                onClick={() => {
+                                    if (connected) {
+                                        // Pass existing credentials when managing
+                                        // We might need to map them back to form fields if structure differs, 
+                                        // but usually we stored what we sent.
+                                        // Also need to set provider if implicit in credentials
+                                        // For WhatsApp, credentials likely has { provider: 'twilio', accountSid: ... }
+                                        setShowConnectModal(integration.id);
+                                    } else {
+                                        setShowConnectModal(integration.id);
+                                    }
+                                }}
                                 className={`w-full py-2 rounded-lg font-semibold transition-all ${connected
-                                    ? 'bg-green-100 text-green-700 cursor-default'
+                                    ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                     : 'bg-primary-blue text-white hover:shadow-lg'
                                     }`}
                             >
-                                {connected ? 'Active' : 'Connect'}
+                                {connected ? 'Manage' : 'Connect'}
                             </button>
                         </div>
                     );
@@ -181,6 +191,7 @@ export default function IntegrationsPage() {
             {showConnectModal && (
                 <ConnectModal
                     type={showConnectModal}
+                    initialData={isConnected(showConnectModal)?.credentials}
                     onClose={() => setShowConnectModal(null)}
                     onConnect={handleConnect}
                 />
