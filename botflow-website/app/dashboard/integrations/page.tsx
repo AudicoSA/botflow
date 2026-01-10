@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ConnectModal from './ConnectModal';
 
-export default function IntegrationsPage() {
+function IntegrationsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [activeCategory, setActiveCategory] = useState('all');
@@ -237,5 +237,13 @@ export default function IntegrationsPage() {
                 />
             )}
         </div>
+    );
+}
+
+export default function IntegrationsPage() {
+    return (
+        <Suspense fallback={<div>Loading integrations...</div>}>
+            <IntegrationsContent />
+        </Suspense>
     );
 }

@@ -29,6 +29,7 @@
         "bullmq": "^5.1.9",
         "dotenv": "^16.4.1",
         "fastify": "^4.26.0",
+        "googleapis": "^170.0.0",
         "ioredis": "^5.3.2",
         "openai": "^4.24.1",
         "pino": "^8.17.2",

@@ -183,6 +183,7 @@ export default function ConnectModal({ type, initialData, onClose, onConnect }: 
                                 className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded-lg transition-all"
                             >
                                 <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+                                {/* Trigger Vercel Deploy */}
                                 Sign in with Google
                             </button>
                         </div>
