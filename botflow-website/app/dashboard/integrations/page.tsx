@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ConnectModal from './ConnectModal';
 
 export default function IntegrationsPage() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const [activeCategory, setActiveCategory] = useState('all');
     const [showConnectModal, setShowConnectModal] = useState<string | null>(null);
     const [connectedIntegrations, setConnectedIntegrations] = useState<any[]>([]);
@@ -47,7 +50,44 @@ export default function IntegrationsPage() {
 
     useEffect(() => {
         fetchIntegrations();
-    }, []);
+
+        // Handle Google OAuth Callback
+        const action = searchParams?.get('action');
+        const status = searchParams?.get('status');
+
+        if (action === 'google_connected' && status === 'success') {
+            const accessToken = searchParams.get('access_token');
+            const refreshToken = searchParams.get('refresh_token');
+            const expiryDate = searchParams.get('expiry_date');
+            const state = searchParams.get('state');
+
+            if (accessToken && state) {
+                try {
+                    const decodedState = JSON.parse(decodeURIComponent(state));
+                    const name = decodedState.name || 'Google Sheets';
+
+                    // Auto-create the integration
+                    handleConnect({
+                        name,
+                        provider: 'google',
+                        accessToken,
+                        refreshToken,
+                        expiryDate,
+                        tokenType: 'Bearer'
+                    }).then(() => {
+                        // Clear URL params
+                        router.replace('/dashboard/integrations');
+                        alert('Google Sheets Connected Successfully!');
+                    }).catch(err => {
+                        console.error('Failed to save Google integration', err);
+                        alert('Failed to save integration');
+                    });
+                } catch (e) {
+                    console.error('Error parsing state', e);
+                }
+            }
+        }
+    }, [searchParams]);
 
     const fetchIntegrations = async () => {
         try {
@@ -68,7 +108,7 @@ export default function IntegrationsPage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                type: showConnectModal,
+                type: data.provider === 'google' ? 'google_sheets' : showConnectModal, // Handle google type mapping
                 name: data.name,
                 credentials: data // This sends all form data as credentials
             }),

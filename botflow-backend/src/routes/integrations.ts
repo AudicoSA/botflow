@@ -222,4 +222,154 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
 
         return { success: true };
     });
-}
+
+    // --- Google OAuth Routes ---
+
+    const getOAuth2Client = () => {
+        const { google } = require('googleapis');
+        return new google.auth.OAuth2(
+            env.GOOGLE_CLIENT_ID,
+            env.GOOGLE_CLIENT_SECRET,
+            env.GOOGLE_REDIRECT_URI
+        );
+    };
+
+    // 1. Start OAuth Flow
+    fastify.get('/google/auth', async (request, reply) => {
+        const { userId } = request.query as { userId?: string }; // In prod, use session/JWT, passing ID for MVP association
+        // For MVP, if we don't have session cookie, we might need to pass user ID in state, 
+        // OR just assume user is logged in via frontend and we trust the final "connect" call.
+        // Actually best practice: Frontend calls this, we generate URL, return it, Frontend redirects.
+
+        const oauth2Client = getOAuth2Client();
+
+        const scopes = [
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/drive.readonly'
+        ];
+
+        const url = oauth2Client.generateAuthUrl({
+            access_type: 'offline', // Critical for refresh token
+            scope: scopes,
+            include_granted_scopes: true,
+            prompt: 'consent' // Force consent to ensure we get refresh token
+        });
+
+        // Redirect user
+        return reply.redirect(url);
+    });
+
+    // 2. OAuth Callback
+    fastify.get('/google/callback', async (request, reply) => {
+        const { code, state } = request.query as { code: string, state?: string };
+
+        if (!code) {
+            return reply.code(400).send('Missing code');
+        }
+
+        try {
+            const oauth2Client = getOAuth2Client();
+            const { tokens } = await oauth2Client.getToken(code);
+            oauth2Client.setCredentials(tokens);
+
+            // Verify who this is.
+            // Since we serve this callback, we need to associate it with a user/org.
+            // Problem: We lost context in the redirect if we didn't use 'state'.
+            // For this MVP, we will render a simple success page that posts the tokens back to the parent window 
+            // OR redirects to the frontend with the tokens in URL (less secure but works for MVP).
+            // BETTER: Store tokens in a temporary DB record or encrypted cookie, redirect to frontend "Success" page.
+
+            // Let's redirect to frontend with a temporary "auth_code" or just the raw tokens for now (MVP style).
+            // Security Warning: Passing tokens in URL is not ideal, but for MVP verification it works.
+            // Alternatively, saving directly here requires knowing the Organization ID.
+            // Let's pass the tokens back to frontend as query params, and let Frontend verify & save via POST /integrations.
+
+            const params = new URLSearchParams({
+                status: 'success',
+                access_token: tokens.access_token || '',
+                refresh_token: tokens.refresh_token || '',
+                expiry_date: (tokens.expiry_date || '').toString()
+            });
+
+            return reply.redirect(`${env.FRONTEND_URL}/dashboard/integrations?${params.toString()}&action=google_connected`);
+
+        } catch (error) {
+            fastify.log.error(error, 'Google OAuth Error');
+            return reply.redirect(`${env.FRONTEND_URL}/dashboard/integrations?status=error`);
+        }
+    });
+    // --- Google OAuth Routes ---
+
+    const getOAuth2Client = () => {
+        const { google } = require('googleapis');
+        return new google.auth.OAuth2(
+            env.GOOGLE_CLIENT_ID,
+            env.GOOGLE_CLIENT_SECRET,
+            env.GOOGLE_REDIRECT_URI
+        );
+    };
+
+    // 1. Start OAuth Flow
+    fastify.get('/google/auth', async (request, reply) => {
+        const { userId } = request.query as { userId?: string }; // In prod, use session/JWT, passing ID for MVP association
+        // For MVP, if we don't have session cookie, we might need to pass user ID in state, 
+        // OR just assume user is logged in via frontend and we trust the final "connect" call.
+        // Actually best practice: Frontend calls this, we generate URL, return it, Frontend redirects.
+
+        const oauth2Client = getOAuth2Client();
+
+        const scopes = [
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/drive.readonly'
+        ];
+
+        const url = oauth2Client.generateAuthUrl({
+            access_type: 'offline', // Critical for refresh token
+            scope: scopes,
+            include_granted_scopes: true,
+            prompt: 'consent' // Force consent to ensure we get refresh token
+        });
+
+        // Redirect user
+        return reply.redirect(url);
+    });
+
+    // 2. OAuth Callback
+    fastify.get('/google/callback', async (request, reply) => {
+        const { code, state } = request.query as { code: string, state?: string };
+
+        if (!code) {
+            return reply.code(400).send('Missing code');
+        }
+
+        try {
+            const oauth2Client = getOAuth2Client();
+            const { tokens } = await oauth2Client.getToken(code);
+            oauth2Client.setCredentials(tokens);
+
+            // Verify who this is.
+            // Since we serve this callback, we need to associate it with a user/org.
+            // Problem: We lost context in the redirect if we didn't use 'state'.
+            // For this MVP, we will render a simple success page that posts the tokens back to the parent window 
+            // OR redirects to the frontend with the tokens in URL (less secure but works for MVP).
+            // BETTER: Store tokens in a temporary DB record or encrypted cookie, redirect to frontend "Success" page.
+
+            // Let's redirect to frontend with a temporary "auth_code" or just the raw tokens for now (MVP style).
+            // Security Warning: Passing tokens in URL is not ideal, but for MVP verification it works.
+            // Alternatively, saving directly here requires knowing the Organization ID.
+            // Let's pass the tokens back to frontend as query params, and let Frontend verify & save via POST /integrations.
+
+            const params = new URLSearchParams({
+                status: 'success',
+                access_token: tokens.access_token || '',
+                refresh_token: tokens.refresh_token || '',
+                expiry_date: (tokens.expiry_date || '').toString()
+            });
+
+            return reply.redirect(`${env.FRONTEND_URL}/dashboard/integrations?${params.toString()}&action=google_connected`);
+
+        } catch (error) {
+            fastify.log.error(error, 'Google OAuth Error');
+            return reply.redirect(`${env.FRONTEND_URL}/dashboard/integrations?status=error`);
+        }
+    });

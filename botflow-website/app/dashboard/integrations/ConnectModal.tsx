@@ -168,19 +168,23 @@ export default function ConnectModal({ type, initialData, onClose, onConnect }: 
                                 onChange={handleChange}
                             />
                         </div>
-                        <div className="mb-4">
-                            <div className="bg-yellow-50 p-3 rounded text-sm text-yellow-800 mb-2">
-                                For MVP, please paste your <strong>Service Account JSON</strong> here.
-                            </div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Service Account JSON</label>
-                            <textarea
-                                name="serviceAccountJson"
-                                required
-                                rows={8}
-                                className="w-full border rounded p-2 font-mono text-xs"
-                                placeholder='{"type": "service_account", ...}'
-                                onChange={(e) => setFormData({ ...formData, serviceAccountJson: e.target.value })}
-                            />
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Authentication</label>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (!formData.name) {
+                                        alert('Please enter a name first');
+                                        return;
+                                    }
+                                    const state = encodeURIComponent(JSON.stringify({ name: formData.name }));
+                                    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/integrations/google/auth?state=${state}`;
+                                }}
+                                className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded-lg transition-all"
+                            >
+                                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+                                Sign in with Google
+                            </button>
                         </div>
                     </>
                 );
