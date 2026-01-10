@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { N8nClient } from '../services/n8n-client.js';
 import { supabaseAdmin } from '../config/supabase.js';
 import { env } from '../config/env.js';
+import { google } from 'googleapis';
 
 const createIntegrationSchema = z.object({
     type: z.enum(['whatsapp', 'google_sheets', 'stripe', 'openai']),
@@ -225,8 +226,13 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
 
     // --- Google OAuth Routes ---
 
+    import { google } from 'googleapis';
+
+    // ... (existing imports)
+
+    // --- Google OAuth Routes ---
+
     const getOAuth2Client = () => {
-        const { google } = require('googleapis');
         return new google.auth.OAuth2(
             env.GOOGLE_CLIENT_ID,
             env.GOOGLE_CLIENT_SECRET,
@@ -236,24 +242,29 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
 
     // 1. Start OAuth Flow
     fastify.get('/google/auth', async (request, reply) => {
-        const { userId, state } = request.query as { userId?: string, state?: string };
-        const oauth2Client = getOAuth2Client();
+        try {
+            const { userId, state } = request.query as { userId?: string, state?: string };
+            const oauth2Client = getOAuth2Client();
 
-        const scopes = [
-            'https://www.googleapis.com/auth/spreadsheets',
-            'https://www.googleapis.com/auth/drive.readonly'
-        ];
+            const scopes = [
+                'https://www.googleapis.com/auth/spreadsheets',
+                'https://www.googleapis.com/auth/drive.readonly'
+            ];
 
-        const url = oauth2Client.generateAuthUrl({
-            access_type: 'offline', // Critical for refresh token
-            scope: scopes,
-            include_granted_scopes: true,
-            prompt: 'consent', // Force consent to ensure we get refresh token
-            state: state // Pass state through (contains name/context)
-        });
+            const url = oauth2Client.generateAuthUrl({
+                access_type: 'offline', // Critical for refresh token
+                scope: scopes,
+                include_granted_scopes: true,
+                prompt: 'consent', // Force consent to ensure we get refresh token
+                state: state // Pass state through (contains name/context)
+            });
 
-        // Redirect user
-        return reply.redirect(url);
+            // Redirect user
+            return reply.redirect(url);
+        } catch (error) {
+            fastify.log.error(error, 'Google Init Auth Error');
+            return reply.code(500).send({ error: 'Failed to initialize Google Auth', details: error.message });
+        }
     });
 
     // 2. OAuth Callback
