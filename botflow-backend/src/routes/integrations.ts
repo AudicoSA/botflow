@@ -79,6 +79,8 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
                 // Check provider from credentials
                 if (credentials.provider === 'bird') {
                     n8nCredentialType = 'messageBirdApi';
+                } else if (credentials.provider === 'twilio') {
+                    n8nCredentialType = 'twilioApi';
                 } else {
                     n8nCredentialType = 'whatsAppApi';
                 }

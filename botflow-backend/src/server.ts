@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import websocket from '@fastify/websocket';
+import formbody from '@fastify/formbody';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 
@@ -62,6 +63,8 @@ await fastify.register(rateLimit, {
     max: 100,
     timeWindow: '1 minute',
 });
+
+await fastify.register(formbody);
 
 await fastify.register(websocket);
 

@@ -43,6 +43,7 @@ export default function ConnectModal({ type, onClose, onConnect }: ConnectModalP
                             >
                                 <option value="meta">Meta (Direct)</option>
                                 <option value="bird">Bird (MessageBird)</option>
+                                <option value="twilio">Twilio</option>
                             </select>
                         </div>
 
@@ -79,6 +80,41 @@ export default function ConnectModal({ type, onClose, onConnect }: ConnectModalP
                                         placeholder="UUID"
                                         onChange={handleChange}
                                     />
+                                </div>
+                            </>
+                        ) : formData.provider === 'twilio' ? (
+                            <>
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Account SID</label>
+                                    <input
+                                        name="accountSid"
+                                        required
+                                        className="w-full border rounded p-2"
+                                        placeholder="AC..."
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Auth Token</label>
+                                    <input
+                                        name="authToken"
+                                        required
+                                        type="password"
+                                        className="w-full border rounded p-2"
+                                        placeholder="Auth Token"
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Twilio Phone Number</label>
+                                    <input
+                                        name="phoneNumber"
+                                        required
+                                        className="w-full border rounded p-2"
+                                        placeholder="e.g. +1234567890"
+                                        onChange={handleChange}
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">If using sandbox, use the sandbox number.</p>
                                 </div>
                             </>
                         ) : (

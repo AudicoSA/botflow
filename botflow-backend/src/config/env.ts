@@ -12,9 +12,14 @@ const envSchema = z.object({
     SUPABASE_SERVICE_ROLE_KEY: z.string(),
 
     // Bird
-    BIRD_API_KEY: z.string(),
-    BIRD_WORKSPACE_ID: z.string(),
+    BIRD_API_KEY: z.string().optional(), // Now optional
+    BIRD_WORKSPACE_ID: z.string().optional(), // Now optional
     BIRD_WEBHOOK_SECRET: z.string().optional(),
+
+    // Twilio
+    TWILIO_ACCOUNT_SID: z.string().optional(),
+    TWILIO_AUTH_TOKEN: z.string().optional(),
+    TWILIO_PHONE_NUMBER: z.string().optional(),
 
     // OpenAI
     OPENAI_API_KEY: z.string(),
