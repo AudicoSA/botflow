@@ -226,12 +226,6 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
 
     // --- Google OAuth Routes ---
 
-    import { google } from 'googleapis';
-
-    // ... (existing imports)
-
-    // --- Google OAuth Routes ---
-
     const getOAuth2Client = () => {
         return new google.auth.OAuth2(
             env.GOOGLE_CLIENT_ID,
