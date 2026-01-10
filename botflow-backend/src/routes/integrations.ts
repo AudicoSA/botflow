@@ -131,7 +131,7 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
                     configuration: { name }, // Store display name in config
                     credentials: credentials, // In prod, ENCRYPT this!
                     n8n_credential_id: n8nCredentialId,
-                    status: n8nCredentialId ? 'connected' : 'draft',
+                    status: 'connected', // Always mark as connected if saved to DB, treating n8n as optional enhancement
                 })
                 .select()
                 .single();
