@@ -6,52 +6,67 @@ import Link from 'next/link';
 
 const BOT_TEMPLATES = [
     {
-        id: 'booking_bot',
-        name: 'Booking & Appointment Bot',
-        description: 'Automated appointment scheduling with calendar integration',
-        icon: '📅',
-        features: ['Calendar integration', 'Time slot selection', 'Confirmation & reminders'],
-        color: 'from-blue-500 to-cyan-500',
-    },
-    {
-        id: 'restaurant_bot',
-        name: 'Restaurant Order Bot',
-        description: 'Take orders and manage table reservations',
-        icon: '🍽️',
-        features: ['Menu display', 'Order taking', 'Table reservations'],
-        color: 'from-orange-500 to-red-500',
-    },
-    {
-        id: 'ecommerce_bot',
-        name: 'E-commerce Product Bot',
-        description: 'Product inquiries and order tracking',
-        icon: '🛍️',
-        features: ['Product catalog', 'Stock availability', 'Order tracking'],
-        color: 'from-purple-500 to-pink-500',
-    },
-    {
-        id: 'support_bot',
-        name: 'Customer Support Bot',
-        description: 'Answer FAQs and provide 24/7 support',
-        icon: '💬',
-        features: ['Knowledge base', 'Smart search', 'Human handoff'],
-        color: 'from-green-500 to-teal-500',
-    },
-    {
-        id: 'lead_gen_bot',
-        name: 'Lead Generation Bot',
-        description: 'Qualify and capture leads automatically',
-        icon: '🎯',
-        features: ['Lead qualification', 'CRM sync', 'Follow-up automation'],
-        color: 'from-yellow-500 to-orange-500',
-    },
-    {
-        id: 'transport_bot',
-        name: 'Transport & Taxi Booking',
-        description: 'Book taxi rides and shuttle services instantly',
+        id: 'taxi_service',
+        name: 'Taxi & Shuttle Service',
+        description: 'Book rides, quote prices, and manage pickups.',
         icon: '🚖',
-        features: ['Route selection', 'Price quotes', 'Driver assignment', 'Trip tracking'],
+        features: ['Ride booking', 'Price estimation', 'Driver dispatch'],
+        color: 'from-yellow-400 to-yellow-600',
+        systemPrompt: "You are a helpful dispatcher for a Taxi & Shuttle service. Your goal is to help customers book rides efficiently.\n\nKey Information to Collect:\n- Pickup Location\n- Destination\n- Pickup Time\n- Number of Passengers\n\nTone: Professional, efficient, and friendly.\nAlways confirm the total price estimate before finalizing the booking.",
+    },
+    {
+        id: 'restaurant_order',
+        name: 'Restaurant (Takeaway/Delivery)',
+        description: 'Take food orders, show menu, and manage delivery.',
+        icon: '🍔',
+        features: ['Menu browsing', 'Order placement', 'Delivery tracking'],
+        color: 'from-orange-500 to-red-500',
+        systemPrompt: "You are a digital waiter for a restaurant. Your goal is to help customers place food orders for takeaway or delivery.\n\nCapabilities:\n- Show menu items\n- Take orders\n- Confirm allergies\n- Collect delivery address\n\nTone: Appetizing, enthusiastic, and helpful.",
+    },
+    {
+        id: 'hair_beauty',
+        name: 'Hair & Beauty Salon',
+        description: 'Schedule appointments and answer service questions.',
+        icon: '✂️',
+        features: ['Appointment booking', 'Service menu', 'Stylist selection'],
+        color: 'from-pink-400 to-rose-500',
+        systemPrompt: "You are the receptionist for a high-end Hair & Beauty Salon. Your goal is to fill the appointment calendar.\n\nTasks:\n- efficient scheduling\n- explaining treatments\n\nTone: Chic, friendly, and welcoming.",
+    },
+    {
+        id: 'medical_clinic',
+        name: 'Medical Clinic / Dentist',
+        description: 'Triage patients and schedule consultations.',
+        icon: '🩺',
+        features: ['Patient triage', 'Appointment scheduling', 'FAQ answers'],
+        color: 'from-blue-400 to-cyan-500',
+        systemPrompt: "You are a medical receptionist. You assist patients in booking consultations. \n\nIMPORTANT: If a patient describes a life-threatening emergency, tell them to call emergency services immediately.\n\nFor non-emergencies, collect:\n- Patient Name\n- Reason for visit\n- Preferred time\n\nTone: Professional, empathetic, and calm.",
+    },
+    {
+        id: 'real_estate',
+        name: 'Real Estate Agent',
+        description: 'Qualify leads and schedule property viewings.',
+        icon: '🏠',
+        features: ['Lead qualification', 'Property details', 'Viewing scheduler'],
         color: 'from-indigo-500 to-purple-500',
+        systemPrompt: "You are a Real Estate Assistant. Your goal is to qualify potential buyers/renters and schedule viewings.\n\nQualifying Questions:\n- Budget range\n- Preferred location\n- Move-in date\n\nTone: Professional, knowledgeable, and persuasive.",
+    },
+    {
+        id: 'ecommerce_support',
+        name: 'E-commerce Store',
+        description: 'Product recommendations and order support.',
+        icon: '🛍️',
+        features: ['Product search', 'Order status', 'Returns help'],
+        color: 'from-purple-500 to-pink-500',
+        systemPrompt: "You are a Sales Assistant for an online store. Help customers find the perfect product and answer shipping questions.\n\nTone: Helpful and sales-oriented.",
+    },
+    {
+        id: 'gym_fitness',
+        name: 'Gym & Fitness Studio',
+        description: 'Class booking and membership inquiries.',
+        icon: '💪',
+        features: ['Class schedule', 'Membership signup', 'Trainer booking'],
+        color: 'from-emerald-400 to-green-600',
+        systemPrompt: "You are a Fitness Consultant. Encourage users to sign up for classes or memberships.\n\nTone: Energetic, motivating, and healthy.",
     },
 ];
 
@@ -64,6 +79,7 @@ export default function CreateBotPage() {
         description: '',
         welcomeMessage: '',
         fallbackMessage: '',
+        systemPrompt: '',
     });
     const [loading, setLoading] = useState(false);
 
@@ -79,8 +95,9 @@ export default function CreateBotPage() {
             setBotConfig({
                 name: tmpl.name,
                 description: tmpl.description,
-                welcomeMessage: `Hi! I'm your ${tmpl.name}. How can I help you today?`,
-                fallbackMessage: "I'm sorry, I didn't understand that. Can you please rephrase?",
+                welcomeMessage: `Hi! I'm your ${tmpl.name} Assistant. How can I help you today?`,
+                fallbackMessage: "I'm sorry, I didn't quite catch that. Could you please say it again?",
+                systemPrompt: (tmpl as any).systemPrompt || '',
             });
         }
     };
@@ -100,6 +117,7 @@ export default function CreateBotPage() {
                 body: JSON.stringify({
                     templateId: selectedTemplate,
                     config: botConfig,
+                    systemPrompt: botConfig.systemPrompt,
                 }),
             });
 
