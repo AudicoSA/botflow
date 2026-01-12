@@ -42,22 +42,24 @@ export default function Hero() {
 
                         <div className="flex flex-col sm:flex-row gap-4 pt-4">
                             <Link
-                                href="#waitlist"
+                                href="/signup"
                                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-surf-DEFAULT hover:bg-surf-dark text-white rounded-2xl font-bold text-lg shadow-lg hover:shadow-surf-light/50 hover:-translate-y-1 transition-all duration-300"
                             >
-                                Start Surfing
+                                Get Started Free
                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                                 </svg>
                             </Link>
 
-                            <button className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/30 text-white rounded-2xl font-bold text-lg transition-all duration-300">
+                            <Link
+                                href="/dashboard/templates"
+                                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/30 text-white rounded-2xl font-bold text-lg transition-all duration-300"
+                            >
                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3zM14 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3z" />
                                 </svg>
-                                Watch Demo
-                            </button>
+                                Browse Templates
+                            </Link>
                         </div>
 
                         <div className="pt-8 flex items-center gap-4 text-gray-300">
