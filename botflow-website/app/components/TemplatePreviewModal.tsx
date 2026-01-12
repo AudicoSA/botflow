@@ -9,9 +9,9 @@ interface Template {
   description: string;
   tagline: string;
   icon: string;
-  example_prompts: string[];
-  integrations: string[];
-  required_fields: Record<string, any>;
+  example_prompts?: string[];
+  integrations?: string[];
+  required_fields?: Record<string, any>;
 }
 
 interface TemplatePreviewModalProps {
