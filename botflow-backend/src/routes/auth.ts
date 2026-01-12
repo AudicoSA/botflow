@@ -106,14 +106,17 @@ export default async function authRoutes(fastify: FastifyInstance) {
         // Get organization's WhatsApp account (if exists)
         let whatsappAccount = null;
         if (memberData?.organization_id) {
-            const { data: waData } = await supabase
+            const { data: waData, error: waError } = await supabase
                 .from('whatsapp_accounts')
                 .select('*')
                 .eq('organization_id', memberData.organization_id)
                 .eq('status', 'active')
-                .limit(1)
-                .single();
-            whatsappAccount = waData;
+                .limit(1);
+
+            // Take first result if exists (don't use .single() as it errors if not found)
+            if (waData && waData.length > 0) {
+                whatsappAccount = waData[0];
+            }
         }
 
         const token = fastify.jwt.sign({
