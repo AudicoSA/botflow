@@ -1,4 +1,9 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+
 export default function DashboardPage() {
+    const router = useRouter();
     const stats = [
         { label: 'Total Conversations', value: '1,234', change: '+12%', icon: '💬' },
         { label: 'Active Bots', value: '3', change: '+1', icon: '🤖' },
@@ -32,21 +37,30 @@ export default function DashboardPage() {
             <div className="bg-white rounded-xl p-6 border border-gray-200">
                 <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <button className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-primary-blue hover:bg-blue-50 transition-all">
+                    <button
+                        onClick={() => router.push('/dashboard/templates')}
+                        className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-primary-blue hover:bg-blue-50 transition-all"
+                    >
                         <span className="text-2xl">🤖</span>
                         <div className="text-left">
                             <p className="font-semibold text-gray-900">Create Bot</p>
                             <p className="text-sm text-gray-600">Set up a new AI assistant</p>
                         </div>
                     </button>
-                    <button className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-primary-blue hover:bg-blue-50 transition-all">
+                    <button
+                        onClick={() => router.push('/dashboard/integrations')}
+                        className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-primary-blue hover:bg-blue-50 transition-all"
+                    >
                         <span className="text-2xl">📱</span>
                         <div className="text-left">
                             <p className="font-semibold text-gray-900">Connect WhatsApp</p>
                             <p className="text-sm text-gray-600">Add a phone number</p>
                         </div>
                     </button>
-                    <button className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-primary-blue hover:bg-blue-50 transition-all">
+                    <button
+                        onClick={() => router.push('/dashboard/marketplace')}
+                        className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-primary-blue hover:bg-blue-50 transition-all"
+                    >
                         <span className="text-2xl">🔌</span>
                         <div className="text-left">
                             <p className="font-semibold text-gray-900">Add Integration</p>
@@ -60,7 +74,10 @@ export default function DashboardPage() {
             <div className="bg-white rounded-xl p-6 border border-gray-200">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-bold text-gray-900">Recent Conversations</h2>
-                    <button className="text-primary-blue hover:underline text-sm font-medium">
+                    <button
+                        onClick={() => router.push('/dashboard/conversations')}
+                        className="text-primary-blue hover:underline text-sm font-medium"
+                    >
                         View all →
                     </button>
                 </div>
