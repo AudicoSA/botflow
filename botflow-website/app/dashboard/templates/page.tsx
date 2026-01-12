@@ -14,6 +14,9 @@ interface Template {
   tagline: string;
   icon: string;
   is_published: boolean;
+  example_prompts?: string[];
+  integrations?: string[];
+  required_fields?: any;
 }
 
 export default function TemplatesPage() {
