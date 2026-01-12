@@ -88,17 +88,15 @@ export default function TemplateSetupPage() {
 
     try {
       // Get auth token from localStorage
-      // NOTE: Adjust this based on your auth implementation
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('botflow_token');
 
       if (!token) {
         throw new Error('Not authenticated');
       }
 
       // Get user context (org and whatsapp account)
-      // NOTE: Replace these with actual values from your user context
-      const organizationId = localStorage.getItem('organizationId');
-      const whatsappAccountId = localStorage.getItem('whatsappAccountId');
+      const organizationId = localStorage.getItem('botflow_organizationId');
+      const whatsappAccountId = localStorage.getItem('botflow_whatsappAccountId');
 
       if (!organizationId || !whatsappAccountId) {
         throw new Error('Missing organization or WhatsApp account. Please complete setup first.');

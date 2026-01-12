@@ -103,6 +103,19 @@ export default async function authRoutes(fastify: FastifyInstance) {
             .eq('user_id', authData.user.id)
             .single();
 
+        // Get organization's WhatsApp account (if exists)
+        let whatsappAccount = null;
+        if (memberData?.organization_id) {
+            const { data: waData } = await supabase
+                .from('whatsapp_accounts')
+                .select('*')
+                .eq('organization_id', memberData.organization_id)
+                .eq('status', 'active')
+                .limit(1)
+                .single();
+            whatsappAccount = waData;
+        }
+
         const token = fastify.jwt.sign({
             userId: authData.user.id,
             email: authData.user.email,
@@ -116,6 +129,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
                 fullName: authData.user.user_metadata.full_name,
             },
             organization: memberData?.organizations,
+            whatsappAccount: whatsappAccount,
             token,
         };
     });

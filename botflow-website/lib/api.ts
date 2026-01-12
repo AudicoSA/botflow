@@ -69,6 +69,17 @@ class ApiClient {
             body: JSON.stringify(data),
         });
         this.setToken(result.token);
+
+        // Store organization and whatsapp account info if available
+        if (typeof window !== 'undefined') {
+            if (result.organization?.id) {
+                localStorage.setItem('botflow_organizationId', result.organization.id);
+            }
+            if (result.whatsappAccount?.id) {
+                localStorage.setItem('botflow_whatsappAccountId', result.whatsappAccount.id);
+            }
+        }
+
         return result;
     }
 
