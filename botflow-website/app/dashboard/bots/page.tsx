@@ -2,23 +2,40 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { api } from '@/lib/api';
 
 export default function BotsPage() {
     const [bots, setBots] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [deletingBotId, setDeletingBotId] = useState<string | null>(null);
 
     const fetchBots = async () => {
         try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-            const response = await fetch(`${apiUrl}/api/bots`);
-            if (response.ok) {
-                const data = await response.json();
-                setBots(data.bots || []);
-            }
+            const data = await api.getBots();
+            setBots(data.bots || []);
         } catch (error) {
             console.error('Failed to fetch bots:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDeleteBot = async (botId: string, botName: string) => {
+        if (!confirm(`Are you sure you want to delete "${botName}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        setDeletingBotId(botId);
+        try {
+            await api.deleteBot(botId);
+            // Remove bot from state
+            setBots(bots.filter(b => b.id !== botId));
+            alert('Bot deleted successfully!');
+        } catch (error: any) {
+            console.error('Failed to delete bot:', error);
+            alert(`Failed to delete bot: ${error.message || 'Unknown error'}`);
+        } finally {
+            setDeletingBotId(null);
         }
     };
 
@@ -125,6 +142,13 @@ export default function BotsPage() {
                                     >
                                         Edit
                                     </Link>
+                                    <button
+                                        onClick={() => handleDeleteBot(bot.id, bot.name)}
+                                        disabled={deletingBotId === bot.id}
+                                        className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {deletingBotId === bot.id ? 'Deleting...' : 'Delete'}
+                                    </button>
                                 </div>
                             </div>
                         </div>

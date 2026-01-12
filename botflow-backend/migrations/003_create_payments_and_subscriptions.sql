@@ -1,12 +1,14 @@
 -- Payments and Subscriptions Tables
 -- Migration: 003
 -- Created: 2026-01-11
+-- Updated: 2026-01-12 (Fixed bot_id type to TEXT)
+-- Note: bot_id is TEXT type to match existing bots(id) column
 
 -- Payments table
 CREATE TABLE IF NOT EXISTS payments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE NOT NULL,
-  bot_id UUID REFERENCES bots(id) ON DELETE SET NULL,
+  bot_id TEXT, -- TEXT to match bots(id) column type
   conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
 
   -- Payment provider details
@@ -40,7 +42,7 @@ CREATE TABLE IF NOT EXISTS payments (
 
 -- Indexes for payments
 CREATE INDEX IF NOT EXISTS idx_payments_organization ON payments(organization_id);
-CREATE INDEX IF NOT EXISTS idx_payments_bot ON payments(bot_id);
+CREATE INDEX IF NOT EXISTS idx_payments_bot ON payments(bot_id); -- Manual FK to bots(id)
 CREATE INDEX IF NOT EXISTS idx_payments_conversation ON payments(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_payments_provider_transaction_id ON payments(provider_transaction_id);
 CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
@@ -50,7 +52,7 @@ CREATE INDEX IF NOT EXISTS idx_payments_created_at ON payments(created_at DESC);
 CREATE TABLE IF NOT EXISTS subscriptions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE NOT NULL,
-  bot_id UUID REFERENCES bots(id) ON DELETE SET NULL,
+  bot_id TEXT, -- TEXT to match bots(id) column type
 
   -- Provider details
   provider TEXT NOT NULL DEFAULT 'paystack', -- paystack, payfast, yoco
@@ -77,7 +79,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 
 -- Indexes for subscriptions
 CREATE INDEX IF NOT EXISTS idx_subscriptions_organization ON subscriptions(organization_id);
-CREATE INDEX IF NOT EXISTS idx_subscriptions_bot ON subscriptions(bot_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_bot ON subscriptions(bot_id); -- Manual FK to bots(id)
 CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_next_payment ON subscriptions(next_payment_date);
 

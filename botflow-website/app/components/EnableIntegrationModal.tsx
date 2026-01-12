@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { api } from '@/lib/api';
 
 interface Integration {
   id: string;
@@ -29,6 +30,28 @@ export function EnableIntegrationModal({ integration, onClose, onSuccess }: Enab
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
+  const [bots, setBots] = useState<any[]>([]);
+  const [selectedBotId, setSelectedBotId] = useState<string>('');
+  const [loadingBots, setLoadingBots] = useState(true);
+
+  // Fetch user's bots
+  useEffect(() => {
+    fetchBots();
+  }, []);
+
+  const fetchBots = async () => {
+    try {
+      const data = await api.getBots();
+      setBots(data.bots || []);
+      if (data.bots?.length > 0) {
+        setSelectedBotId(data.bots[0].id); // Select first bot by default
+      }
+    } catch (err) {
+      console.error('Failed to fetch bots:', err);
+    } finally {
+      setLoadingBots(false);
+    }
+  };
 
   // Get required fields from setup instructions
   const requiredFields = integration.setup_instructions?.required_fields || [];
@@ -43,18 +66,21 @@ export function EnableIntegrationModal({ integration, onClose, onSuccess }: Enab
     setError(null);
 
     try {
-      // TODO: Get actual bot ID from context/state
-      const botId = 'demo-bot-id';
+      if (!selectedBotId) {
+        throw new Error('Please select a bot');
+      }
+
+      // Get token from localStorage
+      const token = typeof window !== 'undefined' ? localStorage.getItem('botflow_token') : null;
 
       const response = await fetch(`http://localhost:3001/api/marketplace/${integration.slug}/enable`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // TODO: Add actual auth token
-          // 'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          bot_id: botId,
+          bot_id: selectedBotId,
           credentials,
           configuration: {},
         }),
@@ -74,6 +100,7 @@ export function EnableIntegrationModal({ integration, onClose, onSuccess }: Enab
   };
 
   const isFormValid = () => {
+    if (!selectedBotId) return false;
     if (!integration.requires_auth) return true;
     return requiredFields.every(field => credentials[field]?.trim());
   };
@@ -119,6 +146,32 @@ export function EnableIntegrationModal({ integration, onClose, onSuccess }: Enab
 
           {/* Content */}
           <div className="bg-white px-6 py-4 max-h-96 overflow-y-auto">
+            {/* Bot Selection */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Bot
+              </label>
+              {loadingBots ? (
+                <div className="text-sm text-gray-500">Loading bots...</div>
+              ) : bots.length === 0 ? (
+                <div className="text-sm text-red-600">
+                  No bots found. Please create a bot first.
+                </div>
+              ) : (
+                <select
+                  value={selectedBotId}
+                  onChange={(e) => setSelectedBotId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {bots.map((bot) => (
+                    <option key={bot.id} value={bot.id}>
+                      {bot.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
             {/* Steps */}
             {steps.length > 0 && (
               <div className="mb-6">

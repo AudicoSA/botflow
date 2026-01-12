@@ -1,6 +1,8 @@
 -- Migration 002: Properties and Availability System for Airbnb iCal Integration
 -- Created: 2026-01-11
+-- Updated: 2026-01-12 (Fixed bot_id type to TEXT)
 -- Purpose: Support vacation rental calendar sync with Airbnb, Booking.com, etc.
+-- Note: bot_id is TEXT type to match existing bots(id) column
 
 -- ========================================
 -- Table: properties
@@ -10,7 +12,7 @@
 CREATE TABLE IF NOT EXISTS properties (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE NOT NULL,
-  bot_id UUID REFERENCES bots(id) ON DELETE SET NULL,
+  bot_id TEXT, -- TEXT to match bots(id) column type
   name TEXT NOT NULL,
   timezone TEXT NOT NULL DEFAULT 'Africa/Johannesburg',
   ical_urls JSONB NOT NULL DEFAULT '[]'::jsonb, -- Array of {url, source} objects
@@ -68,7 +70,7 @@ CREATE TABLE IF NOT EXISTS sync_logs (
 CREATE INDEX IF NOT EXISTS idx_properties_organization
   ON properties(organization_id);
 
--- Fast property lookups by bot
+-- Fast property lookups by bot (manual foreign key to bots table)
 CREATE INDEX IF NOT EXISTS idx_properties_bot
   ON properties(bot_id);
 
