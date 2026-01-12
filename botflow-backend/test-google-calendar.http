@@ -1,0 +1,298 @@
+### Google Calendar API Testing
+### Base URL
+@baseUrl = http://localhost:3001
+@token = YOUR_JWT_TOKEN_HERE
+
+###################################################
+# 1. Start OAuth Flow
+###################################################
+
+### Start Google Calendar OAuth (opens browser)
+GET {{baseUrl}}/api/calendar/auth
+# Note: This will redirect to Google OAuth consent screen
+# After approval, you'll be redirected to /api/calendar/callback
+
+###################################################
+# 2. Create Calendar Event
+###################################################
+
+### Create a new calendar event
+POST {{baseUrl}}/api/calendar/events
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "summary": "Haircut Appointment",
+  "description": "Customer: John Doe\nService: Haircut\nPhone: +27 11 123 4567",
+  "location": "123 Main Street, Johannesburg",
+  "start": {
+    "dateTime": "2026-02-15T10:00:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  },
+  "end": {
+    "dateTime": "2026-02-15T11:00:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  },
+  "attendees": [
+    {
+      "email": "customer@example.com",
+      "displayName": "John Doe"
+    }
+  ],
+  "sendUpdates": "all"
+}
+
+### Create event with Google Meet link
+POST {{baseUrl}}/api/calendar/events
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "summary": "Virtual Consultation",
+  "description": "Medical consultation via Google Meet",
+  "start": {
+    "dateTime": "2026-02-16T14:00:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  },
+  "end": {
+    "dateTime": "2026-02-16T14:30:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  },
+  "conferenceDataVersion": 1
+}
+
+### Create all-day event
+POST {{baseUrl}}/api/calendar/events
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "summary": "Closed for Public Holiday",
+  "start": {
+    "date": "2026-03-21"
+  },
+  "end": {
+    "date": "2026-03-22"
+  }
+}
+
+###################################################
+# 3. List Calendar Events
+###################################################
+
+### List upcoming events (next 7 days)
+GET {{baseUrl}}/api/calendar/events?timeMin=2026-02-15T00:00:00Z&timeMax=2026-02-22T23:59:59Z&maxResults=10
+Authorization: Bearer {{token}}
+
+### List events from specific calendar
+GET {{baseUrl}}/api/calendar/events?calendarId=primary&maxResults=20
+Authorization: Bearer {{token}}
+
+### Search events
+GET {{baseUrl}}/api/calendar/events?q=haircut&maxResults=5
+Authorization: Bearer {{token}}
+
+###################################################
+# 4. Update Calendar Event
+###################################################
+
+### Update event time
+PATCH {{baseUrl}}/api/calendar/events/EVENT_ID_HERE
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "calendarId": "primary",
+  "start": {
+    "dateTime": "2026-02-15T11:00:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  },
+  "end": {
+    "dateTime": "2026-02-15T12:00:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  },
+  "sendUpdates": "all"
+}
+
+### Update event details
+PATCH {{baseUrl}}/api/calendar/events/EVENT_ID_HERE
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "calendarId": "primary",
+  "summary": "Haircut & Styling Appointment",
+  "description": "Updated: Added styling service"
+}
+
+###################################################
+# 5. Delete Calendar Event
+###################################################
+
+### Delete event
+DELETE {{baseUrl}}/api/calendar/events/EVENT_ID_HERE?calendarId=primary&sendUpdates=all
+Authorization: Bearer {{token}}
+
+###################################################
+# 6. Check Availability
+###################################################
+
+### Check available time slots
+POST {{baseUrl}}/api/calendar/availability
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "calendarId": "primary",
+  "startDate": "2026-02-17T00:00:00Z",
+  "endDate": "2026-02-21T23:59:59Z",
+  "slotDuration": 30,
+  "workingHours": {
+    "start": "09:00",
+    "end": "17:00"
+  },
+  "timezone": "Africa/Johannesburg"
+}
+
+### Check availability for full day
+POST {{baseUrl}}/api/calendar/availability
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "calendarId": "primary",
+  "startDate": "2026-02-15T00:00:00Z",
+  "endDate": "2026-02-15T23:59:59Z",
+  "slotDuration": 60,
+  "workingHours": {
+    "start": "08:00",
+    "end": "18:00"
+  }
+}
+
+###################################################
+# 7. List Calendars
+###################################################
+
+### Get all calendars for user
+GET {{baseUrl}}/api/calendar/calendars
+Authorization: Bearer {{token}}
+
+###################################################
+# Test Scenarios for Different Templates
+###################################################
+
+### Salon Appointment
+POST {{baseUrl}}/api/calendar/events
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "summary": "Haircut - Sarah Johnson",
+  "description": "Service: Haircut & Blow Dry\nStylist: Preferred (Emma)\nPhone: +27 82 555 1234\nHair Type: African, Curly",
+  "location": "Salon XYZ, Sandton",
+  "start": {
+    "dateTime": "2026-02-18T10:00:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  },
+  "end": {
+    "dateTime": "2026-02-18T11:30:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  }
+}
+
+### Medical Appointment
+POST {{baseUrl}}/api/calendar/events
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "summary": "Dr. Smith - Patient Consultation",
+  "description": "Patient: David Moyo\nMedical Aid: Discovery\nReason: Annual checkup\nPhone: +27 11 456 7890",
+  "location": "Medical Centre, Rosebank",
+  "start": {
+    "dateTime": "2026-02-19T14:00:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  },
+  "end": {
+    "dateTime": "2026-02-19T14:30:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  },
+  "conferenceDataVersion": 1
+}
+
+### Restaurant Reservation
+POST {{baseUrl}}/api/calendar/events
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "summary": "Table Reservation - Party of 4",
+  "description": "Guest: Michael Brown\nParty Size: 4\nOccasion: Birthday\nDietary: 1 Vegetarian\nPhone: +27 21 789 0123",
+  "location": "The Grill Restaurant, Cape Town",
+  "start": {
+    "dateTime": "2026-02-20T19:00:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  },
+  "end": {
+    "dateTime": "2026-02-20T21:00:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  }
+}
+
+### Gym Personal Training Session
+POST {{baseUrl}}/api/calendar/events
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "summary": "PT Session - Jane Williams",
+  "description": "Trainer: Mark\nGoal: Weight loss\nSession: Upper body\nPhone: +27 83 222 3456",
+  "location": "FitZone Gym, Pretoria",
+  "start": {
+    "dateTime": "2026-02-17T06:00:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  },
+  "end": {
+    "dateTime": "2026-02-17T07:00:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  }
+}
+
+### Real Estate Property Viewing
+POST {{baseUrl}}/api/calendar/events
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "summary": "Property Viewing - 123 Oak Avenue",
+  "description": "Client: Tom Anderson\nProperty: 3-bed townhouse\nBudget: R2.5M\nPhone: +27 72 888 9999",
+  "location": "123 Oak Avenue, Sandton, Johannesburg",
+  "start": {
+    "dateTime": "2026-02-21T11:00:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  },
+  "end": {
+    "dateTime": "2026-02-21T12:00:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  }
+}
+
+### Taxi Pickup
+POST {{baseUrl}}/api/calendar/events
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "summary": "Taxi Pickup - Airport Transfer",
+  "description": "Passenger: Lisa Nkosi\nPickup: OR Tambo Airport\nDropoff: Sandton City\nPhone: +27 84 111 2222",
+  "location": "OR Tambo International Airport",
+  "start": {
+    "dateTime": "2026-02-22T10:30:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  },
+  "end": {
+    "dateTime": "2026-02-22T11:15:00+02:00",
+    "timeZone": "Africa/Johannesburg"
+  }
+}

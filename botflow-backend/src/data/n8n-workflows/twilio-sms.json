@@ -1,0 +1,76 @@
+{
+  "name": "BotFlow → Twilio SMS Notifications",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Send SMS Notification",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-twilio-sms-{{bot_id}}",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "format-sms",
+      "name": "Format SMS Message",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format SMS notification\nconst data = items[0].json;\n\nreturn [{\n  json: {\n    to: data.to_number || data.phone || '',\n    from: data.from_number || '{{twilio_phone_number}}',\n    body: data.message || data.body || 'Notification from your business',\n    messagingServiceSid: data.messaging_service_sid || ''\n  }\n}];"
+      }
+    },
+    {
+      "id": "send-twilio-sms",
+      "name": "Send SMS via Twilio",
+      "type": "n8n-nodes-base.twilio",
+      "position": [650, 300],
+      "parameters": {
+        "resource": "sms",
+        "operation": "send",
+        "from": "={{$json.from}}",
+        "to": "={{$json.to}}",
+        "message": "={{$json.body}}",
+        "options": {}
+      },
+      "credentials": {
+        "twilioApi": {
+          "id": "{{credentials.twilio_api}}",
+          "name": "Twilio API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-sms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-sms": {
+      "main": [
+        [
+          {
+            "node": "send-twilio-sms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 30
+  }
+}

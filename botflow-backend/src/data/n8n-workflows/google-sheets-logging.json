@@ -1,0 +1,95 @@
+{
+  "name": "BotFlow → Google Sheets Logging",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "New Conversation Message",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-sheets-{{bot_id}}",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "format-row",
+      "name": "Format Spreadsheet Row",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format conversation data for Google Sheets\nconst data = items[0].json;\n\nreturn [{\n  json: {\n    timestamp: new Date().toISOString(),\n    date: new Date().toLocaleDateString('en-ZA'),\n    time: new Date().toLocaleTimeString('en-ZA'),\n    customer_phone: data.from || 'Unknown',\n    customer_name: data.contact_name || 'Unknown',\n    message: data.message || '',\n    direction: data.direction || 'inbound',\n    bot_response: data.bot_response || '',\n    conversation_id: data.conversation_id || '',\n    bot_id: data.bot_id || '',\n    intent: data.intent || 'general',\n    handoff_required: data.handoff_required ? 'Yes' : 'No',\n    sentiment: data.sentiment || 'neutral'\n  }\n}];"
+      }
+    },
+    {
+      "id": "append-to-sheet",
+      "name": "Append to Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [650, 300],
+      "parameters": {
+        "operation": "append",
+        "sheetId": "={{$json.spreadsheet_id || '{{spreadsheet_id}}'}}",
+        "range": "Conversations!A:M",
+        "options": {
+          "valueInputMode": "USER_ENTERED"
+        },
+        "values": {
+          "values": [
+            [
+              "={{$json.timestamp}}",
+              "={{$json.date}}",
+              "={{$json.time}}",
+              "={{$json.customer_phone}}",
+              "={{$json.customer_name}}",
+              "={{$json.message}}",
+              "={{$json.direction}}",
+              "={{$json.bot_response}}",
+              "={{$json.conversation_id}}",
+              "={{$json.bot_id}}",
+              "={{$json.intent}}",
+              "={{$json.handoff_required}}",
+              "={{$json.sentiment}}"
+            ]
+          ]
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "{{credentials.google_sheets_oauth}}",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-row": {
+      "main": [
+        [
+          {
+            "node": "append-to-sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 30
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "name": "BotFlow → Gmail Confirmations",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Booking Confirmed",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-gmail-{{bot_id}}",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "format-email",
+      "name": "Format Email Content",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format booking confirmation email\nconst booking = items[0].json;\nconst businessName = booking.business_name || 'Our Business';\n\nconst subject = `Booking Confirmation - ${businessName}`;\n\nconst htmlBody = `\n<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .header { background: #4CAF50; color: white; padding: 20px; text-align: center; }\n    .content { background: #f9f9f9; padding: 20px; border-radius: 5px; }\n    .booking-details { background: white; padding: 15px; margin: 15px 0; border-left: 4px solid #4CAF50; }\n    .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1>✅ Booking Confirmed!</h1>\n    </div>\n    <div class=\"content\">\n      <p>Hi ${booking.customer_name || 'there'},</p>\n      <p>Your booking with <strong>${businessName}</strong> has been confirmed.</p>\n      \n      <div class=\"booking-details\">\n        <h3>Booking Details</h3>\n        <p><strong>Date:</strong> ${booking.booking_date || 'N/A'}</p>\n        <p><strong>Time:</strong> ${booking.booking_time || 'N/A'}</p>\n        <p><strong>Service:</strong> ${booking.service || 'Standard service'}</p>\n        <p><strong>Details:</strong> ${booking.details || 'N/A'}</p>\n      </div>\n      \n      <p>If you need to make any changes or have questions, please reply to this email or contact us via WhatsApp.</p>\n      <p>We look forward to seeing you!</p>\n      <p>Best regards,<br>${businessName}</p>\n    </div>\n    <div class=\"footer\">\n      <p>This is an automated confirmation from ${businessName}'s WhatsApp Bot</p>\n      <p>Powered by BotFlow</p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n\nreturn [{\n  json: {\n    to: booking.customer_email || `${booking.phone}@whatsapp.botflow.co.za`,\n    subject,\n    htmlBody,\n    from: booking.business_email || 'noreply@botflow.co.za'\n  }\n}];"
+      }
+    },
+    {
+      "id": "send-email",
+      "name": "Send via Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "position": [650, 300],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "to": "={{$json.to}}",
+        "subject": "={{$json.subject}}",
+        "message": "={{$json.htmlBody}}",
+        "messageType": "html"
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "{{credentials.gmail_oauth}}",
+          "name": "Gmail OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-email": {
+      "main": [
+        [
+          {
+            "node": "send-email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 45
+  }
+}

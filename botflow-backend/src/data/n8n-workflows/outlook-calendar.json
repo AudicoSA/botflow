@@ -1,0 +1,103 @@
+{
+  "name": "BotFlow → Microsoft Outlook Calendar",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Calendar Event",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-outlook-{{bot_id}}",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "format-event",
+      "name": "Format Calendar Event",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format calendar event for Outlook\nconst data = items[0].json;\nconst startTime = new Date(`${data.booking_date}T${data.booking_time}:00+02:00`);\nconst endTime = new Date(startTime.getTime() + (data.duration || 60) * 60000);\n\nreturn [{\n  json: {\n    subject: data.subject || `${data.service || 'Appointment'} - ${data.customer_name || 'Client'}`,\n    body: {\n      contentType: 'HTML',\n      content: `<h3>${data.service || 'Appointment'}</h3><p><strong>Customer:</strong> ${data.customer_name || 'Unknown'}</p><p><strong>Phone:</strong> ${data.phone || 'N/A'}</p><p><strong>Details:</strong> ${data.details || 'No additional details'}</p><p><em>Booked via WhatsApp Bot</em></p>`\n    },\n    start: {\n      dateTime: startTime.toISOString(),\n      timeZone: 'South Africa Standard Time'\n    },\n    end: {\n      dateTime: endTime.toISOString(),\n      timeZone: 'South Africa Standard Time'\n    },\n    location: {\n      displayName: data.location || ''\n    },\n    attendees: data.customer_email ? [\n      {\n        emailAddress: {\n          address: data.customer_email,\n          name: data.customer_name || 'Client'\n        },\n        type: 'required'\n      }\n    ] : [],\n    isReminderOn: true,\n    reminderMinutesBeforeStart: 60\n  }\n}];"
+      }
+    },
+    {
+      "id": "create-outlook-event",
+      "name": "Create Outlook Calendar Event",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "position": [650, 300],
+      "parameters": {
+        "resource": "calendar",
+        "operation": "create",
+        "calendarId": "calendar",
+        "subject": "={{$json.subject}}",
+        "start": "={{$json.start.dateTime}}",
+        "end": "={{$json.end.dateTime}}",
+        "additionalFields": {
+          "body": "={{$json.body}}",
+          "location": "={{$json.location.displayName}}",
+          "attendees": "={{$json.attendees}}",
+          "isReminderOn": true,
+          "reminderMinutesBeforeStart": 60
+        }
+      },
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "{{credentials.outlook_oauth}}",
+          "name": "Microsoft Outlook OAuth2"
+        }
+      }
+    },
+    {
+      "id": "format-response",
+      "name": "Format Booking Response",
+      "type": "n8n-nodes-base.function",
+      "position": [850, 300],
+      "parameters": {
+        "functionCode": "// Format Outlook response\nconst event = items[0].json;\n\nif (event.id) {\n  return [{\n    json: {\n      success: true,\n      event_id: event.id,\n      start_time: event.start?.dateTime || '',\n      message: 'Your appointment has been added to the calendar!'\n    }\n  }];\n} else {\n  return [{\n    json: {\n      success: false,\n      error: 'Failed to create calendar event',\n      message: 'Sorry, we could not add your appointment to the calendar. Please try again.'\n    }\n  }];\n}"
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-event": {
+      "main": [
+        [
+          {
+            "node": "create-outlook-event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create-outlook-event": {
+      "main": [
+        [
+          {
+            "node": "format-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 45
+  }
+}

@@ -1,0 +1,204 @@
+### Airbnb & Property API Testing
+### Use with REST Client extension in VS Code
+
+@baseUrl = http://localhost:3001
+@jwt = YOUR_JWT_TOKEN_HERE
+@propertyId = YOUR_PROPERTY_ID_HERE
+
+###############################################
+# 1. Create a Property
+###############################################
+
+POST {{baseUrl}}/api/properties
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "name": "Ocean View Beach House",
+  "ical_urls": [
+    {
+      "url": "https://www.airbnb.com/calendar/ical/123456789.ics",
+      "source": "airbnb"
+    }
+  ],
+  "min_nights": 2,
+  "max_nights": 30,
+  "check_in_time": "15:00",
+  "check_out_time": "10:00",
+  "buffer_days": 1
+}
+
+###############################################
+# 2. Get All Properties
+###############################################
+
+GET {{baseUrl}}/api/properties
+Authorization: Bearer {{jwt}}
+
+###############################################
+# 3. Get Single Property
+###############################################
+
+GET {{baseUrl}}/api/properties/{{propertyId}}
+Authorization: Bearer {{jwt}}
+
+###############################################
+# 4. Update Property
+###############################################
+
+PATCH {{baseUrl}}/api/properties/{{propertyId}}
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "name": "Ocean View Beach House (Updated)",
+  "min_nights": 3
+}
+
+###############################################
+# 5. Manual Sync Property Calendar
+###############################################
+
+POST {{baseUrl}}/api/properties/{{propertyId}}/sync
+Authorization: Bearer {{jwt}}
+
+###############################################
+# 6. Check Availability (Public - No Auth)
+###############################################
+
+GET {{baseUrl}}/api/properties/{{propertyId}}/availability?start=2026-02-12&end=2026-02-15
+
+###############################################
+# 7. Check Different Dates
+###############################################
+
+GET {{baseUrl}}/api/properties/{{propertyId}}/availability?start=2026-03-01&end=2026-03-07
+
+###############################################
+# 8. Get All Blocked Dates
+###############################################
+
+GET {{baseUrl}}/api/properties/{{propertyId}}/blocked-dates
+
+###############################################
+# 9. Get Blocked Dates for Specific Range
+###############################################
+
+GET {{baseUrl}}/api/properties/{{propertyId}}/blocked-dates?from=2026-02-01&to=2026-03-31
+
+###############################################
+# 10. Find Next Available Openings
+###############################################
+
+GET {{baseUrl}}/api/properties/{{propertyId}}/next-openings?from=2026-02-01&nights=2&count=5
+
+###############################################
+# 11. Get Sync Logs
+###############################################
+
+GET {{baseUrl}}/api/properties/{{propertyId}}/sync-logs?limit=10
+Authorization: Bearer {{jwt}}
+
+###############################################
+# 12. Delete Property
+###############################################
+
+DELETE {{baseUrl}}/api/properties/{{propertyId}}
+Authorization: Bearer {{jwt}}
+
+###############################################
+# Testing Scenarios
+###############################################
+
+### Test 1: Create property with multiple calendars
+POST {{baseUrl}}/api/properties
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "name": "Mountain Cabin",
+  "ical_urls": [
+    {
+      "url": "https://www.airbnb.com/calendar/ical/111111.ics",
+      "source": "airbnb"
+    },
+    {
+      "url": "https://admin.booking.com/ical/222222.ics",
+      "source": "booking"
+    },
+    {
+      "url": "https://calendar.google.com/calendar/ical/user@example.com/private-333333/basic.ics",
+      "source": "google"
+    }
+  ],
+  "min_nights": 1,
+  "max_nights": 14
+}
+
+### Test 2: Check availability for past dates (should fail)
+GET {{baseUrl}}/api/properties/{{propertyId}}/availability?start=2025-12-01&end=2025-12-05
+
+### Test 3: Check availability with end date before start date (should fail)
+GET {{baseUrl}}/api/properties/{{propertyId}}/availability?start=2026-02-15&end=2026-02-10
+
+### Test 4: Check availability for 1 night (should check min_nights)
+GET {{baseUrl}}/api/properties/{{propertyId}}/availability?start=2026-02-12&end=2026-02-13
+
+### Test 5: Long-term booking (30+ days)
+GET {{baseUrl}}/api/properties/{{propertyId}}/availability?start=2026-03-01&end=2026-04-15
+
+###############################################
+# Expected Responses
+###############################################
+
+# Successful Availability Check (Available):
+# {
+#   "available": true,
+#   "blockedDates": [],
+#   "propertyName": "Ocean View Beach House"
+# }
+
+# Successful Availability Check (Not Available):
+# {
+#   "available": false,
+#   "blockedDates": [
+#     {
+#       "start": "2026-02-12",
+#       "end": "2026-02-15",
+#       "reason": "Reserved",
+#       "source": "airbnb"
+#     }
+#   ],
+#   "propertyName": "Ocean View Beach House"
+# }
+
+# Min Nights Violation:
+# {
+#   "available": false,
+#   "blockedDates": [],
+#   "minNights": 2,
+#   "message": "Minimum stay is 2 nights",
+#   "propertyName": "Ocean View Beach House"
+# }
+
+# Sync Result:
+# {
+#   "success": true,
+#   "eventsProcessed": 12
+# }
+
+# Next Openings:
+# {
+#   "openings": [
+#     {
+#       "start": "2026-02-20",
+#       "end": "2026-02-22",
+#       "nights": 2
+#     },
+#     {
+#       "start": "2026-02-25",
+#       "end": "2026-02-27",
+#       "nights": 2
+#     }
+#   ]
+# }

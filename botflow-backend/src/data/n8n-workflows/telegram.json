@@ -1,0 +1,77 @@
+{
+  "name": "BotFlow → Telegram Notifications",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Send Telegram Message",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-telegram-{{bot_id}}",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "format-telegram-message",
+      "name": "Format Telegram Message",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format message for Telegram\nconst data = items[0].json;\n\nlet message = '';\n\nif (data.type === 'booking') {\n  message = `🎉 *New Booking Received!*\\n\\n` +\n            `*Customer:* ${data.customer_name || 'Unknown'}\\n` +\n            `*Phone:* ${data.phone || 'N/A'}\\n` +\n            `*Date:* ${data.booking_date || 'N/A'}\\n` +\n            `*Time:* ${data.booking_time || 'N/A'}\\n` +\n            `*Service:* ${data.service || 'N/A'}\\n\\n` +\n            `_Received via WhatsApp Bot_`;\n} else if (data.type === 'inquiry') {\n  message = `💬 *New Customer Inquiry*\\n\\n` +\n            `*From:* ${data.customer_name || 'Unknown'}\\n` +\n            `*Phone:* ${data.phone || 'N/A'}\\n` +\n            `*Message:* ${data.message || 'No message'}\\n\\n` +\n            `_Received via WhatsApp Bot_`;\n} else {\n  message = data.message || 'New notification from BotFlow';\n}\n\nreturn [{\n  json: {\n    chatId: data.chat_id || '{{telegram_chat_id}}',\n    text: message,\n    parseMode: 'Markdown'\n  }\n}];"
+      }
+    },
+    {
+      "id": "send-to-telegram",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "position": [650, 300],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.text}}",
+        "additionalFields": {
+          "parseMode": "Markdown"
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "{{credentials.telegram_bot_token}}",
+          "name": "Telegram Bot Token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-telegram-message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-telegram-message": {
+      "main": [
+        [
+          {
+            "node": "send-to-telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 30
+  }
+}

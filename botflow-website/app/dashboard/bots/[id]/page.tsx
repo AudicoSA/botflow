@@ -1,18 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 export default function BotEditorPage() {
     const router = useRouter();
     const params = useParams();
+    const searchParams = useSearchParams();
     const botId = params.id as string;
+    const justCreated = searchParams.get('created') === 'true';
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [bot, setBot] = useState<any>(null);
     const [activeTab, setActiveTab] = useState('general');
+    const [showSuccess, setShowSuccess] = useState(justCreated);
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -63,6 +66,14 @@ export default function BotEditorPage() {
             fetchBot();
         }
     }, [botId, router]);
+
+    useEffect(() => {
+        if (justCreated) {
+            // Auto-hide success message after 10 seconds
+            const timer = setTimeout(() => setShowSuccess(false), 10000);
+            return () => clearTimeout(timer);
+        }
+    }, [justCreated]);
 
     const handleSave = async () => {
         setSaving(true);
@@ -118,6 +129,34 @@ export default function BotEditorPage() {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
+            {/* Success Message */}
+            {showSuccess && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6 animate-fade-in">
+                    <div className="flex items-start gap-4">
+                        <div className="text-4xl">🎉</div>
+                        <div className="flex-1">
+                            <h2 className="text-green-900 font-bold text-lg mb-1">
+                                Bot Created Successfully!
+                            </h2>
+                            <p className="text-green-800 text-sm mb-3">
+                                Your bot is now active and ready to receive messages from customers.
+                            </p>
+                            <div className="flex gap-3">
+                                <Link href={`/dashboard/conversations`} className="text-sm text-green-700 underline hover:text-green-900">
+                                    View conversations →
+                                </Link>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setShowSuccess(false)}
+                            className="text-green-600 hover:text-green-800 text-xl"
+                        >
+                            ×
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>

@@ -1,0 +1,45 @@
+{
+  "name": "BotFlow → PayFast Payment Processing",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Payment Request",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-payfast-{{bot_id}}",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "create-payment-data",
+      "name": "Create Payment Data",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Prepare PayFast payment request\nconst data = items[0].json;\nconst amount = parseFloat(data.amount || 0).toFixed(2);\n\nconst paymentData = {\n  merchant_id: '{{merchant_id}}',\n  merchant_key: '{{merchant_key}}',\n  return_url: `https://api.botflow.co.za/webhooks/payfast/return?bot_id={{bot_id}}`,\n  cancel_url: `https://api.botflow.co.za/webhooks/payfast/cancel?bot_id={{bot_id}}`,\n  notify_url: `https://api.botflow.co.za/webhooks/payfast/notify?bot_id={{bot_id}}`,\n  name_first: data.customer_name?.split(' ')[0] || 'Customer',\n  name_last: data.customer_name?.split(' ').slice(1).join(' ') || 'Name',\n  email_address: data.customer_email || `${data.phone}@whatsapp.botflow.co.za`,\n  cell_number: data.phone || '',\n  m_payment_id: data.payment_id || `pay_${Date.now()}`,\n  amount: amount,\n  item_name: data.item_name || 'Service Payment',\n  item_description: data.description || 'Payment via WhatsApp Bot',\n  custom_str1: data.conversation_id || '',\n  custom_str2: data.bot_id || '{{bot_id}}',\n  custom_str3: data.organization_id || '{{organization_id}}',\n  email_confirmation: 1,\n  confirmation_address: data.business_email || 'payments@botflow.co.za'\n};\n\n// Generate signature (MD5 hash of parameters)\nconst crypto = require('crypto');\nconst paramString = Object.entries(paymentData)\n  .filter(([k, v]) => v)\n  .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)\n  .join('&');\n\nconst passphrase = '{{passphrase}}';\nconst signatureString = passphrase ? `${paramString}&passphrase=${passphrase}` : paramString;\npaymentData.signature = crypto.createHash('md5').update(signatureString).digest('hex');\n\n// PayFast URL (sandbox or live)\nconst payfastUrl = '{{is_sandbox}}' === 'true' \n  ? 'https://sandbox.payfast.co.za/eng/process'\n  : 'https://www.payfast.co.za/eng/process';\n\nconst paymentUrl = `${payfastUrl}?${Object.entries(paymentData)\n  .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)\n  .join('&')}`;\n\nreturn [{\n  json: {\n    success: true,\n    payment_url: paymentUrl,\n    payment_id: paymentData.m_payment_id,\n    amount: amount,\n    message: `Please complete your payment of R${amount} using this link: ${paymentUrl}`\n  }\n}];"
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "create-payment-data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 30
+  }
+}

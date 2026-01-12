@@ -4,6 +4,7 @@ import { WorkflowGenerator } from '../services/workflow-generator.js';
 import { N8nClient } from '../services/n8n-client.js';
 import { supabaseAdmin } from '../config/supabase.js';
 import { env } from '../config/env.js';
+import { TemplateInstantiationService } from '../services/template-instantiation.service.js';
 
 const createBotSchema = z.object({
     templateId: z.string(),
@@ -339,5 +340,42 @@ export default async function botRoutes(fastify: FastifyInstance) {
         }
 
         return { success: true };
+    });
+
+    // POST /api/bots/create-from-template - Create bot from template
+    fastify.post('/create-from-template', {
+        onRequest: [fastify.authenticate]
+    }, async (request, reply) => {
+        const schema = z.object({
+            template_id: z.string().uuid(),
+            organization_id: z.string().uuid(),
+            whatsapp_account_id: z.string().uuid(),
+            bot_name: z.string().min(1),
+            field_values: z.record(z.any()),
+        });
+
+        try {
+            const data = schema.parse(request.body) as {
+                template_id: string;
+                organization_id: string;
+                whatsapp_account_id: string;
+                bot_name: string;
+                field_values: Record<string, any>;
+            };
+
+            const result = await TemplateInstantiationService.instantiateBot(data);
+
+            return reply.code(201).send({
+                success: true,
+                bot: result.bot,
+                template: result.template,
+            });
+        } catch (error: any) {
+            if (error instanceof z.ZodError) {
+                return reply.code(400).send({ error: 'Validation error', details: error.errors });
+            }
+            fastify.log.error(error);
+            return reply.code(500).send({ error: error.message || 'Failed to create bot from template' });
+        }
     });
 }

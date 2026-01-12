@@ -1,0 +1,81 @@
+{
+  "name": "BotFlow → Make (Integromat) Automation",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "BotFlow Event",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-make-{{bot_id}}",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "format-make-payload",
+      "name": "Format Make Webhook Payload",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format data for Make (Integromat) webhook\nconst data = items[0].json;\n\nreturn [{\n  json: {\n    event_type: data.event_type || 'whatsapp_message',\n    timestamp: new Date().toISOString(),\n    bot: {\n      id: '{{bot_id}}',\n      name: data.bot_name || '',\n      vertical: data.vertical || 'General',\n      organization_id: '{{organization_id}}'\n    },\n    conversation: {\n      id: data.conversation_id || '',\n      status: data.conversation_status || 'active'\n    },\n    customer: {\n      phone: data.from || data.phone || '',\n      name: data.contact_name || data.customer_name || 'Unknown',\n      email: data.email || `${data.from || data.phone}@whatsapp.botflow.co.za`\n    },\n    message: {\n      id: data.message_id || '',\n      text: data.message || data.body || '',\n      direction: data.direction || 'inbound',\n      intent: data.intent || 'general',\n      sentiment: data.sentiment || 'neutral'\n    },\n    booking: data.booking_data ? {\n      date: data.booking_data.date || '',\n      time: data.booking_data.time || '',\n      service: data.booking_data.service || '',\n      status: data.booking_data.status || 'pending'\n    } : null,\n    metadata: {\n      handoff_required: data.handoff_required || false,\n      ai_confidence: data.ai_confidence || 0,\n      response_time_ms: data.response_time_ms || 0\n    },\n    custom_fields: data.custom_fields || {}\n  }\n}];"
+      }
+    },
+    {
+      "id": "send-to-make",
+      "name": "Send to Make Webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [650, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.make_webhook_url || '{{make_webhook_url}}'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {
+          "timeout": 10000
+        }
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-make-payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-make-payload": {
+      "main": [
+        [
+          {
+            "node": "send-to-make",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 15
+  }
+}

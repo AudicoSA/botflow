@@ -1,0 +1,151 @@
+{
+  "name": "E-commerce Store",
+  "vertical": "ecommerce",
+  "tier": 1,
+  "description": "Automate product inquiries, order status, and customer support for online stores.",
+  "tagline": "24/7 customer service for your store",
+  "icon": "🛒",
+  "required_fields": {
+    "store_name": {
+      "type": "text",
+      "label": "Store Name",
+      "placeholder": "e.g. Cape Town Fashion Hub",
+      "required": true
+    },
+    "product_categories": {
+      "type": "multiselect",
+      "label": "Product Categories",
+      "required": true,
+      "validation": {
+        "options": [
+          "Fashion & Clothing",
+          "Electronics",
+          "Home & Garden",
+          "Beauty & Cosmetics",
+          "Sports & Outdoors",
+          "Books & Media",
+          "Food & Beverages",
+          "Toys & Games",
+          "Health & Wellness"
+        ]
+      }
+    },
+    "website_url": {
+      "type": "text",
+      "label": "Store Website URL",
+      "placeholder": "e.g. www.capetownfashion.co.za",
+      "required": true
+    },
+    "delivery_areas": {
+      "type": "text",
+      "label": "Delivery Areas",
+      "placeholder": "e.g. Nationwide South Africa",
+      "required": true
+    },
+    "delivery_time": {
+      "type": "text",
+      "label": "Standard Delivery Time",
+      "placeholder": "e.g. 3-5 business days",
+      "required": true
+    },
+    "delivery_fee": {
+      "type": "text",
+      "label": "Delivery Fee",
+      "placeholder": "e.g. R60 (free over R500)",
+      "required": true
+    },
+    "payment_methods": {
+      "type": "multiselect",
+      "label": "Payment Methods",
+      "required": true,
+      "validation": {
+        "options": [
+          "Credit/Debit Card",
+          "EFT",
+          "PayFast",
+          "Cash on Delivery",
+          "Store Credit"
+        ]
+      }
+    },
+    "return_policy": {
+      "type": "text",
+      "label": "Return Policy",
+      "placeholder": "e.g. 14 days for unworn items",
+      "required": true
+    },
+    "support_email": {
+      "type": "text",
+      "label": "Support Email",
+      "placeholder": "e.g. support@capetownfashion.co.za",
+      "required": true
+    },
+    "support_hours": {
+      "type": "text",
+      "label": "Support Hours",
+      "placeholder": "e.g. Mon-Fri: 9am-6pm",
+      "required": true
+    }
+  },
+  "conversation_flow": {
+    "systemPrompt": "You are a helpful customer service agent for {{store_name}}, an online store.\n\nYou assist customers with:\n1. Product inquiries and recommendations\n2. Order status tracking\n3. Delivery information\n4. Returns and exchanges\n5. General store information\n\nStore Details:\n- Name: {{store_name}}\n- Categories: {{product_categories}}\n- Website: {{website_url}}\n- Delivery: {{delivery_areas}} ({{delivery_time}})\n- Delivery Fee: {{delivery_fee}}\n- Payment: {{payment_methods}}\n- Returns: {{return_policy}}\n- Support: {{support_email}} ({{support_hours}})\n\nGUIDELINES:\n- Be friendly, helpful, and solution-oriented\n- For order tracking, ask for order number\n- For product questions, direct to website or offer recommendations\n- For complaints, be empathetic and offer solutions\n- Promote current sales or promotions if mentioned\n- Always provide order confirmation details\n- Protect customer privacy",
+    "welcomeMessage": "Hi! 👋 Welcome to {{store_name}}! I'm here to help with product questions, order tracking, or any other inquiries. What can I help you with today?",
+    "rules": [
+      "Always ask for order number when tracking orders",
+      "Direct customers to website for full product catalog",
+      "Be clear about delivery times and fees",
+      "Explain return policy when asked",
+      "Never share other customers' information",
+      "For payment issues, escalate to support team",
+      "Confirm customer details before discussing orders",
+      "Offer alternatives if product is out of stock"
+    ],
+    "intents": {
+      "track_order": {
+        "triggers": ["track", "order status", "where is my order", "delivery"],
+        "response": "Ask for order number and confirm customer name/email to look up status."
+      },
+      "product_inquiry": {
+        "triggers": ["product", "do you have", "available", "stock", "size", "color"],
+        "response": "Ask what they're looking for. Provide category info and direct to website. Offer to help find specific items."
+      },
+      "shipping_question": {
+        "triggers": ["shipping", "delivery", "how long", "courier"],
+        "response": "Provide delivery time, areas, and fees. Mention free delivery threshold if applicable."
+      },
+      "return_inquiry": {
+        "triggers": ["return", "refund", "exchange", "send back"],
+        "response": "Explain return policy clearly. Ask for order number if they want to initiate return."
+      },
+      "payment_question": {
+        "triggers": ["payment", "pay", "card", "eft"],
+        "response": "List accepted payment methods. For payment issues, escalate to support."
+      },
+      "complaint": {
+        "triggers": ["complaint", "problem", "issue", "wrong", "damaged", "missing"],
+        "response": "Be empathetic. Ask for order number and details. Offer solution or escalate."
+      },
+      "promo_question": {
+        "triggers": ["sale", "discount", "promo", "coupon", "special"],
+        "response": "Mention current promotions. Direct to website for full deals."
+      }
+    },
+    "handoffConditions": [
+      "Customer reports damaged or incorrect item",
+      "Payment dispute or refund request",
+      "Customer is very angry or threatening",
+      "Technical issue with website or checkout",
+      "Bulk order or corporate inquiry",
+      "Request for store credit or special accommodation"
+    ]
+  },
+  "example_prompts": [
+    "Where is my order? I ordered last week",
+    "Do you have this shirt in size medium?",
+    "What's your return policy?",
+    "How much is delivery to Durban?"
+  ],
+  "integrations": ["ecommerce_platform", "payment", "shipping"],
+  "is_published": true,
+  "version": 1
+}

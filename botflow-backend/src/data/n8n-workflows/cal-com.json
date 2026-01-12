@@ -1,0 +1,110 @@
+{
+  "name": "BotFlow → Cal.com Scheduling",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Create Booking",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-calcom-{{bot_id}}",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "format-booking",
+      "name": "Format Cal.com Booking",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format booking for Cal.com\nconst data = items[0].json;\nconst startTime = new Date(`${data.booking_date}T${data.booking_time}:00+02:00`);\n\nreturn [{\n  json: {\n    eventTypeId: data.event_type_id || '{{event_type_id}}',\n    start: startTime.toISOString(),\n    responses: {\n      name: data.customer_name || 'Client',\n      email: data.email || `${data.phone}@whatsapp.botflow.co.za`,\n      phone: data.phone || '',\n      notes: data.notes || '',\n      guests: []\n    },\n    timeZone: 'Africa/Johannesburg',\n    language: 'en',\n    metadata: {\n      botId: '{{bot_id}}',\n      conversationId: data.conversation_id || '',\n      source: 'WhatsApp Bot'\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "create-booking",
+      "name": "Create Cal.com Booking",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [650, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.cal.com/v1/bookings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "apiKey",
+              "value": "{{credentials.calcom_api_key}}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {}
+      }
+    },
+    {
+      "id": "format-response",
+      "name": "Format Booking Response",
+      "type": "n8n-nodes-base.function",
+      "position": [850, 300],
+      "parameters": {
+        "functionCode": "// Format Cal.com response\nconst response = items[0].json;\n\nif (response.booking) {\n  return [{\n    json: {\n      success: true,\n      booking_id: response.booking.id,\n      uid: response.booking.uid,\n      start_time: response.booking.startTime,\n      message: `Your appointment is confirmed!\\n\\nBooking ID: ${response.booking.uid}\\nDate: ${new Date(response.booking.startTime).toLocaleString('en-ZA')}`\n    }\n  }];\n} else {\n  return [{\n    json: {\n      success: false,\n      error: response.message || 'Booking failed',\n      message: 'Sorry, we could not create your booking. Please try again.'\n    }\n  }];\n}"
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-booking": {
+      "main": [
+        [
+          {
+            "node": "create-booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create-booking": {
+      "main": [
+        [
+          {
+            "node": "format-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 45
+  }
+}

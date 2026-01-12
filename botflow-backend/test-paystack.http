@@ -1,0 +1,330 @@
+### Paystack Payment API Testing
+### Base URL
+@baseUrl = http://localhost:3001
+@token = YOUR_JWT_TOKEN_HERE
+
+###################################################
+# 1. Initialize Payment
+###################################################
+
+### Initialize payment - R100 haircut deposit
+POST {{baseUrl}}/api/payments/initialize
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "customer@example.com",
+  "amount": 100,
+  "currency": "ZAR",
+  "metadata": {
+    "bot_id": "...",
+    "service": "Haircut appointment",
+    "customer_name": "John Doe"
+  }
+}
+
+### Initialize payment - R500 gym membership
+POST {{baseUrl}}/api/payments/initialize
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "member@example.com",
+  "amount": 500,
+  "currency": "ZAR",
+  "channels": ["card", "eft"],
+  "metadata": {
+    "bot_id": "...",
+    "service": "Monthly gym membership"
+  }
+}
+
+### Initialize payment with custom callback
+POST {{baseUrl}}/api/payments/initialize
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "customer@example.com",
+  "amount": 250,
+  "currency": "ZAR",
+  "callback_url": "https://your-frontend.com/payments/success",
+  "metadata": {
+    "bot_id": "...",
+    "service": "Restaurant deposit"
+  }
+}
+
+###################################################
+# 2. Verify Payment
+###################################################
+
+### Verify payment by reference
+GET {{baseUrl}}/api/payments/verify/txn_1234567890_abc123
+Authorization: Bearer {{token}}
+
+###################################################
+# 3. Charge Saved Card (Recurring)
+###################################################
+
+### Charge customer using saved authorization
+POST {{baseUrl}}/api/payments/charge
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "customer@example.com",
+  "amount": 100,
+  "authorization_code": "AUTH_abc123xyz",
+  "metadata": {
+    "service": "Monthly subscription"
+  }
+}
+
+###################################################
+# 4. Refund Payment
+###################################################
+
+### Full refund
+POST {{baseUrl}}/api/payments/refund
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "transaction": "txn_reference_here",
+  "customer_note": "Customer requested cancellation",
+  "merchant_note": "Appointment cancelled 24h notice"
+}
+
+### Partial refund (R50 of R100)
+POST {{baseUrl}}/api/payments/refund
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "transaction": "txn_reference_here",
+  "amount": 50,
+  "customer_note": "Partial refund for service change"
+}
+
+###################################################
+# 5. Create Subscription Plan
+###################################################
+
+### Monthly gym membership plan
+POST {{baseUrl}}/api/payments/plans
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Monthly Gym Membership",
+  "amount": 499,
+  "interval": "monthly",
+  "description": "Full gym access with classes",
+  "currency": "ZAR"
+}
+
+### Weekly salon package
+POST {{baseUrl}}/api/payments/plans
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Weekly Beauty Package",
+  "amount": 299,
+  "interval": "weekly",
+  "description": "Weekly haircut and styling"
+}
+
+###################################################
+# 6. Create Subscription
+###################################################
+
+### Subscribe customer to plan
+POST {{baseUrl}}/api/payments/subscriptions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "customer": "customer@example.com",
+  "plan": "PLN_abc123xyz",
+  "authorization": "AUTH_saved_card_code"
+}
+
+###################################################
+# 7. List Payments
+###################################################
+
+### List all payments (paginated)
+GET {{baseUrl}}/api/payments?page=1&perPage=20
+Authorization: Bearer {{token}}
+
+### List successful payments only
+GET {{baseUrl}}/api/payments?status=success&page=1&perPage=10
+Authorization: Bearer {{token}}
+
+### List failed payments
+GET {{baseUrl}}/api/payments?status=failed
+Authorization: Bearer {{token}}
+
+###################################################
+# Test Scenarios for Different Templates
+###################################################
+
+### Salon - Haircut Deposit
+POST {{baseUrl}}/api/payments/initialize
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "sarah@example.com",
+  "amount": 100,
+  "currency": "ZAR",
+  "metadata": {
+    "template": "salon",
+    "service": "Haircut & Blow Dry",
+    "customer_name": "Sarah Johnson",
+    "appointment_date": "2026-02-18T10:00:00Z"
+  }
+}
+
+### Medical - Consultation Fee
+POST {{baseUrl}}/api/payments/initialize
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "patient@example.com",
+  "amount": 350,
+  "currency": "ZAR",
+  "metadata": {
+    "template": "medical",
+    "service": "General Consultation",
+    "patient_name": "David Moyo",
+    "medical_aid": "Discovery"
+  }
+}
+
+### Restaurant - Table Deposit
+POST {{baseUrl}}/api/payments/initialize
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "guest@example.com",
+  "amount": 200,
+  "currency": "ZAR",
+  "metadata": {
+    "template": "restaurant",
+    "service": "Table Reservation",
+    "party_size": 4,
+    "occasion": "Birthday"
+  }
+}
+
+### Gym - Monthly Membership
+POST {{baseUrl}}/api/payments/initialize
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "member@example.com",
+  "amount": 499,
+  "currency": "ZAR",
+  "metadata": {
+    "template": "gym",
+    "service": "Monthly Membership",
+    "member_name": "Jane Williams",
+    "membership_tier": "Premium"
+  }
+}
+
+### Taxi - Ride Prepayment
+POST {{baseUrl}}/api/payments/initialize
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "passenger@example.com",
+  "amount": 150,
+  "currency": "ZAR",
+  "metadata": {
+    "template": "taxi",
+    "service": "Airport Transfer",
+    "pickup": "OR Tambo Airport",
+    "dropoff": "Sandton City"
+  }
+}
+
+### Hotel - Booking Deposit (30%)
+POST {{baseUrl}}/api/payments/initialize
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "guest@example.com",
+  "amount": 450,
+  "currency": "ZAR",
+  "metadata": {
+    "template": "hotel",
+    "service": "Room Booking Deposit",
+    "room_type": "Deluxe King",
+    "check_in": "2026-03-01",
+    "check_out": "2026-03-05",
+    "total_amount": 1500
+  }
+}
+
+### E-commerce - Product Payment
+POST {{baseUrl}}/api/payments/initialize
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "customer@example.com",
+  "amount": 899,
+  "currency": "ZAR",
+  "metadata": {
+    "template": "ecommerce",
+    "service": "Product Purchase",
+    "order_id": "ORD-2026-001",
+    "items": [
+      {"name": "T-Shirt", "qty": 2, "price": 299},
+      {"name": "Jeans", "qty": 1, "price": 599}
+    ]
+  }
+}
+
+### Real Estate - Viewing Fee
+POST {{baseUrl}}/api/payments/initialize
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "buyer@example.com",
+  "amount": 500,
+  "currency": "ZAR",
+  "metadata": {
+    "template": "real_estate",
+    "service": "Property Viewing Fee",
+    "property": "123 Oak Avenue",
+    "viewing_date": "2026-02-21T11:00:00Z"
+  }
+}
+
+###################################################
+# Paystack Test Cards (Sandbox)
+###################################################
+
+# Success:
+# Card: 4084 0840 8408 4081
+# CVV: 408
+# Expiry: 12/30
+# PIN: 0000
+
+# Insufficient Funds:
+# Card: 5060 6666 6666 6666 6666
+# CVV: 123
+# Expiry: 12/30
+
+# For more test cards: https://paystack.com/docs/payments/test-payments

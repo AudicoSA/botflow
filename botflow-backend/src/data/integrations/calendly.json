@@ -1,0 +1,23 @@
+{
+  "name": "Calendly",
+  "slug": "calendly",
+  "category": "calendar",
+  "description": "Sync bookings with Calendly scheduling platform",
+  "long_description": "Integrate with Calendly for seamless appointment scheduling. Perfect for consultants, coaches, and service providers who already use Calendly. Automatically create Calendly booking links and sync appointments.",
+  "icon_url": "https://assets.calendly.com/assets/frontend/media/logo.svg",
+  "requires_auth": true,
+  "auth_type": "api_key",
+  "recommended_for_verticals": ["lawyer", "accountant", "tutor", "medical", "doctor"],
+  "pricing_model": "free",
+  "is_featured": false,
+  "documentation_url": "https://developer.calendly.com/",
+  "supported_features": ["create", "read", "webhook"],
+  "setup_instructions": {
+    "steps": [
+      "Get your Calendly API key from Account Settings → Integrations",
+      "Paste your API key",
+      "Select your default event type"
+    ],
+    "required_fields": ["api_key", "event_type_uuid"]
+  }
+}

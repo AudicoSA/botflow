@@ -16,6 +16,7 @@ export default function DashboardLayout({
     const navigation = [
         { name: 'Dashboard', href: '/dashboard', icon: '📊' },
         { name: 'Bots', href: '/dashboard/bots', icon: '🤖' },
+        { name: 'Templates', href: '/dashboard/templates', icon: '📋' },
         { name: 'Conversations', href: '/dashboard/conversations', icon: '💬' },
         { name: 'Analytics', href: '/dashboard/analytics', icon: '📈' },
         { name: 'Integrations', href: '/dashboard/integrations', icon: '🔌' },

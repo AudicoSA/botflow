@@ -1,0 +1,100 @@
+{
+  "name": "BotFlow → Zoom Meeting Creation",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Create Meeting Request",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-zoom-{{bot_id}}",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "format-meeting",
+      "name": "Format Zoom Meeting",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format Zoom meeting request\nconst data = items[0].json;\nconst startTime = new Date(`${data.meeting_date}T${data.meeting_time}:00+02:00`);\n\nreturn [{\n  json: {\n    topic: data.meeting_topic || 'Consultation',\n    type: 2, // Scheduled meeting\n    start_time: startTime.toISOString(),\n    duration: parseInt(data.duration || 30),\n    timezone: 'Africa/Johannesburg',\n    agenda: data.agenda || 'Consultation meeting',\n    settings: {\n      host_video: true,\n      participant_video: true,\n      join_before_host: false,\n      mute_upon_entry: false,\n      watermark: false,\n      use_pmi: false,\n      approval_type: 2, // No registration\n      audio: 'both',\n      auto_recording: 'none',\n      alternative_hosts: '',\n      waiting_room: true,\n      meeting_authentication: false\n    },\n    customer_name: data.customer_name || 'Client',\n    customer_email: data.email || `${data.phone}@whatsapp.botflow.co.za`\n  }\n}];"
+      }
+    },
+    {
+      "id": "create-zoom-meeting",
+      "name": "Create Zoom Meeting",
+      "type": "n8n-nodes-base.zoom",
+      "position": [650, 300],
+      "parameters": {
+        "operation": "create",
+        "topic": "={{$json.topic}}",
+        "meetingType": "scheduled",
+        "startTime": "={{$json.start_time}}",
+        "duration": "={{$json.duration}}",
+        "timezone": "={{$json.timezone}}",
+        "additionalFields": {
+          "agenda": "={{$json.agenda}}",
+          "settings": "={{$json.settings}}"
+        }
+      },
+      "credentials": {
+        "zoomOAuth2Api": {
+          "id": "{{credentials.zoom_oauth}}",
+          "name": "Zoom OAuth2"
+        }
+      }
+    },
+    {
+      "id": "format-response",
+      "name": "Format Meeting Response",
+      "type": "n8n-nodes-base.function",
+      "position": [850, 300],
+      "parameters": {
+        "functionCode": "// Format Zoom response for WhatsApp\nconst meeting = items[0].json;\nconst inputData = items[0].json;\n\nif (meeting.join_url) {\n  return [{\n    json: {\n      success: true,\n      meeting_id: meeting.id,\n      join_url: meeting.join_url,\n      start_url: meeting.start_url,\n      password: meeting.password || '',\n      start_time: meeting.start_time,\n      message: `Your Zoom meeting is scheduled!\\n\\nTopic: ${meeting.topic}\\nDate: ${new Date(meeting.start_time).toLocaleString('en-ZA')}\\n\\nJoin link: ${meeting.join_url}\\n${meeting.password ? `Password: ${meeting.password}` : ''}`\n    }\n  }];\n} else {\n  return [{\n    json: {\n      success: false,\n      error: 'Failed to create meeting',\n      message: 'Sorry, we could not create your Zoom meeting. Please try again.'\n    }\n  }];\n}"
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-meeting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-meeting": {
+      "main": [
+        [
+          {
+            "node": "create-zoom-meeting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create-zoom-meeting": {
+      "main": [
+        [
+          {
+            "node": "format-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 45
+  }
+}

@@ -1,0 +1,190 @@
+{
+  "name": "Retail Store",
+  "vertical": "retail",
+  "tier": 2,
+  "description": "Automate store inquiries, product availability, and customer service for brick-and-mortar retail shops.",
+  "tagline": "Smart store assistant for your customers",
+  "icon": "🏪",
+  "required_fields": {
+    "store_name": {
+      "type": "text",
+      "label": "Store Name",
+      "placeholder": "e.g. Sandton Fashion Boutique",
+      "required": true
+    },
+    "store_type": {
+      "type": "select",
+      "label": "Store Type",
+      "required": true,
+      "validation": {
+        "options": [
+          "Clothing & Fashion",
+          "Electronics",
+          "Furniture & Home",
+          "Sporting Goods",
+          "Books & Stationery",
+          "General Store",
+          "Hardware Store",
+          "Pharmacy",
+          "Gift Shop",
+          "Other"
+        ]
+      }
+    },
+    "operating_hours": {
+      "type": "text",
+      "label": "Operating Hours",
+      "placeholder": "e.g. Mon-Fri: 9am-6pm, Sat: 9am-2pm",
+      "required": true
+    },
+    "location": {
+      "type": "text",
+      "label": "Store Location",
+      "placeholder": "e.g. Shop 12, Sandton City, Johannesburg",
+      "required": true
+    },
+    "contact_number": {
+      "type": "text",
+      "label": "Contact Number",
+      "placeholder": "e.g. 011 234 5678",
+      "required": true
+    },
+    "products_sold": {
+      "type": "multiselect",
+      "label": "Products Sold",
+      "required": true,
+      "validation": {
+        "options": [
+          "Men's Clothing",
+          "Women's Clothing",
+          "Children's Clothing",
+          "Shoes & Accessories",
+          "Electronics & Gadgets",
+          "Home Appliances",
+          "Furniture",
+          "Sporting Equipment",
+          "Books & Magazines",
+          "Stationery & Office",
+          "Gifts & Toys",
+          "Hardware & Tools",
+          "Beauty Products",
+          "Pharmacy Items"
+        ]
+      }
+    },
+    "price_range": {
+      "type": "select",
+      "label": "Price Range",
+      "required": true,
+      "validation": {
+        "options": [
+          "Budget-Friendly (R)",
+          "Mid-Range (RR)",
+          "Premium (RRR)",
+          "Luxury (RRRR)"
+        ]
+      }
+    },
+    "payment_methods": {
+      "type": "multiselect",
+      "label": "Payment Methods",
+      "required": true,
+      "validation": {
+        "options": [
+          "Cash",
+          "Credit/Debit Card",
+          "EFT",
+          "SnapScan",
+          "Zapper",
+          "Store Credit",
+          "Layaway"
+        ]
+      }
+    },
+    "services_offered": {
+      "type": "multiselect",
+      "label": "Additional Services",
+      "required": false,
+      "validation": {
+        "options": [
+          "Layaway Plans",
+          "Gift Wrapping",
+          "Repairs & Alterations",
+          "Home Delivery",
+          "Click & Collect",
+          "Gift Cards",
+          "Personal Shopping",
+          "Product Orders"
+        ]
+      }
+    },
+    "return_policy": {
+      "type": "text",
+      "label": "Return Policy",
+      "placeholder": "e.g. 7 days with receipt, unworn items",
+      "required": false
+    }
+  },
+  "conversation_flow": {
+    "systemPrompt": "You are a helpful store assistant for {{store_name}}, a {{store_type}} retail store.\n\nYou assist customers with:\n1. Product availability and location in store\n2. Store hours and location directions\n3. Pricing information and payment methods\n4. Return policy and store services\n5. General store inquiries\n\nStore Details:\n- Name: {{store_name}}\n- Type: {{store_type}}\n- Hours: {{operating_hours}}\n- Location: {{location}}\n- Contact: {{contact_number}}\n- Products: {{products_sold}}\n- Price Range: {{price_range}}\n- Payment: {{payment_methods}}\n- Services: {{services_offered}}\n- Returns: {{return_policy}}\n\nGUIDELINES:\n- Be friendly, helpful, and knowledgeable about the store\n- For specific product questions, mention you'll check with staff for exact availability\n- Provide clear directions and operating hours\n- Be transparent about pricing and payment options\n- Explain return policy clearly when asked\n- Mention load shedding impact if relevant (\"We're open but payment terminals may be cash-only during load shedding\")\n- Promote special services like layaway if available\n- Always invite customers to visit the store for better assistance\n- South African context: Use local terminology (\"braai\" items, \"geyser\" timer batteries, etc.)",
+    "welcomeMessage": "Hello! 👋 Welcome to {{store_name}}! I'm here to help with product inquiries, store hours, or any questions you have. How can I assist you today?",
+    "rules": [
+      "Always provide accurate store hours and location",
+      "For specific product availability, offer to check with store staff",
+      "Be clear about payment methods accepted",
+      "Explain return policy with receipt requirement",
+      "Mention load shedding impact on card payments if relevant",
+      "Promote layaway and other services when appropriate",
+      "For complex product questions, invite customer to visit store",
+      "Always be friendly and welcoming"
+    ],
+    "intents": {
+      "product_inquiry": {
+        "triggers": ["do you have", "sell", "stock", "available", "product", "item", "brand"],
+        "response": "Ask what specific product they're looking for. Mention the product categories you carry. Offer to check with store staff for exact availability and pricing."
+      },
+      "store_hours": {
+        "triggers": ["open", "close", "hours", "what time", "when open"],
+        "response": "Provide operating hours clearly. Mention any special hours for public holidays or load shedding adjustments."
+      },
+      "location_directions": {
+        "triggers": ["where", "location", "address", "directions", "how to get"],
+        "response": "Provide store address and location details. Offer to send directions or landmark information."
+      },
+      "pricing_question": {
+        "triggers": ["how much", "price", "cost", "expensive"],
+        "response": "Mention the store's general price range. For specific items, offer to check with staff or invite customer to visit."
+      },
+      "payment_methods": {
+        "triggers": ["payment", "pay", "card", "cash", "eft"],
+        "response": "List all accepted payment methods. Mention load shedding impact on card terminals if relevant."
+      },
+      "return_policy": {
+        "triggers": ["return", "refund", "exchange", "bring back"],
+        "response": "Explain return policy clearly, including timeframe and receipt requirement. Be helpful and customer-friendly."
+      },
+      "special_services": {
+        "triggers": ["layaway", "delivery", "gift wrap", "service", "repair"],
+        "response": "List available services. Explain how layaway works if offered. Mention delivery options if available."
+      }
+    },
+    "handoffConditions": [
+      "Customer wants to place a special order",
+      "Customer has a complaint about product or service",
+      "Pricing dispute or refund request",
+      "Customer asking about products not in store category",
+      "Request for bulk or corporate orders",
+      "Technical product questions requiring expert knowledge",
+      "Customer is unhappy or frustrated"
+    ]
+  },
+  "example_prompts": [
+    "Do you have Nike sneakers in stock?",
+    "What time do you close today?",
+    "Do you take card payments?",
+    "What's your return policy?"
+  ],
+  "integrations": ["maps", "crm"],
+  "is_published": true,
+  "version": 1
+}

@@ -1,0 +1,129 @@
+{
+  "name": "BotFlow → Mixpanel Product Analytics",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Track Event",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-mixpanel-{{bot_id}}",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "format-mixpanel-event",
+      "name": "Format Mixpanel Event",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format event for Mixpanel\nconst data = items[0].json;\n\nconst eventData = {\n  event: data.event_name || 'WhatsApp Message',\n  properties: {\n    distinct_id: data.conversation_id || `wa_${data.phone}`,\n    token: '{{mixpanel_project_token}}',\n    time: Date.now(),\n    $insert_id: `${data.conversation_id}_${Date.now()}`,\n    bot_id: '{{bot_id}}',\n    organization_id: '{{organization_id}}',\n    customer_phone: data.phone || '',\n    customer_name: data.customer_name || 'Unknown',\n    message: data.message || '',\n    direction: data.direction || 'inbound',\n    intent: data.intent || 'general',\n    vertical: data.vertical || 'General',\n    handoff_required: data.handoff_required || false,\n    sentiment: data.sentiment || 'neutral',\n    message_length: (data.message || '').length,\n    response_time_ms: data.response_time_ms || 0,\n    country: 'South Africa',\n    timezone: 'Africa/Johannesburg'\n  }\n};\n\n// Base64 encode for Mixpanel\nconst encoded = Buffer.from(JSON.stringify(eventData)).toString('base64');\n\nreturn [{ json: { data: encoded } }];"
+      }
+    },
+    {
+      "id": "send-to-mixpanel",
+      "name": "Send to Mixpanel",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [650, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.mixpanel.com/track",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "data",
+              "value": "={{$json.data}}"
+            },
+            {
+              "name": "verbose",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "update-user-profile",
+      "name": "Update User Profile",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 500],
+      "parameters": {
+        "functionCode": "// Update Mixpanel user profile\nconst data = items[0].json;\n\nconst profileData = {\n  $token: '{{mixpanel_project_token}}',\n  $distinct_id: data.conversation_id || `wa_${data.phone}`,\n  $set: {\n    $name: data.customer_name || 'WhatsApp User',\n    $phone: data.phone || '',\n    $email: data.email || `${data.phone}@whatsapp.botflow.co.za`,\n    bot_id: '{{bot_id}}',\n    vertical: data.vertical || 'General',\n    last_message_at: new Date().toISOString(),\n    total_messages: (data.message_count || 0) + 1,\n    country: 'South Africa'\n  }\n};\n\nconst encoded = Buffer.from(JSON.stringify(profileData)).toString('base64');\n\nreturn [{ json: { data: encoded } }];"
+      }
+    },
+    {
+      "id": "send-profile-update",
+      "name": "Send Profile Update",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [650, 500],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.mixpanel.com/engage",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "data",
+              "value": "={{$json.data}}"
+            },
+            {
+              "name": "verbose",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-mixpanel-event",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "update-user-profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-mixpanel-event": {
+      "main": [
+        [
+          {
+            "node": "send-to-mixpanel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update-user-profile": {
+      "main": [
+        [
+          {
+            "node": "send-profile-update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 20
+  }
+}

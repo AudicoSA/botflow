@@ -1,0 +1,109 @@
+{
+  "name": "BotFlow → Mindbody Class Booking",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Class Booking Request",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-mindbody-{{bot_id}}",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "format-booking",
+      "name": "Format Class Booking",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format gym class booking for Mindbody\nconst data = items[0].json;\n\nreturn [{\n  json: {\n    siteId: data.site_id || '{{site_id}}',\n    clientId: data.client_id || '',\n    classId: data.class_id || '',\n    classScheduleId: data.schedule_id || '',\n    client: {\n      firstName: data.customer_name?.split(' ')[0] || 'Member',\n      lastName: data.customer_name?.split(' ').slice(1).join(' ') || 'User',\n      email: data.email || `${data.phone}@whatsapp.botflow.co.za`,\n      mobilePhone: data.phone || ''\n    },\n    waitlist: false,\n    sendEmail: true,\n    test: false\n  }\n}];"
+      }
+    },
+    {
+      "id": "add-to-class",
+      "name": "Add Client to Class",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [650, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.mindbodyonline.com/public/v6/site/{{site_id}}/class/addclienttoclass",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Api-Key",
+              "value": "{{credentials.mindbody_api_key}}"
+            },
+            {
+              "name": "SiteId",
+              "value": "{{site_id}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {}
+      }
+    },
+    {
+      "id": "format-response",
+      "name": "Format Booking Response",
+      "type": "n8n-nodes-base.function",
+      "position": [850, 300],
+      "parameters": {
+        "functionCode": "// Format Mindbody response\nconst response = items[0].json;\n\nif (response.Class) {\n  return [{\n    json: {\n      success: true,\n      class_name: response.Class.ClassName || 'Class',\n      instructor: response.Class.Staff?.Name || 'Instructor',\n      date_time: response.Class.StartDateTime || '',\n      message: `You're booked for ${response.Class.ClassName} on ${new Date(response.Class.StartDateTime).toLocaleString('en-ZA')}!`\n    }\n  }];\n} else {\n  return [{\n    json: {\n      success: false,\n      error: response.Error?.Message || 'Booking failed',\n      message: 'Sorry, we could not book your class. Please check availability and try again.'\n    }\n  }];\n}"
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-booking": {
+      "main": [
+        [
+          {
+            "node": "add-to-class",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "add-to-class": {
+      "main": [
+        [
+          {
+            "node": "format-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 45
+  }
+}

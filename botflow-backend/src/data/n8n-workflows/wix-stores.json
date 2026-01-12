@@ -1,0 +1,90 @@
+{
+  "name": "BotFlow → Wix Stores",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Product Query",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-wix-{{bot_id}}",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "search-wix-products",
+      "name": "Search Wix Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [450, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.wixapis.com/stores/v1/products/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "{{credentials.wix_api_key}}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{$json.query || $json.product_name}}"
+            },
+            {
+              "name": "limit",
+              "value": "5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "format-products",
+      "name": "Format Product Response",
+      "type": "n8n-nodes-base.function",
+      "position": [650, 300],
+      "parameters": {
+        "functionCode": "// Format Wix products for WhatsApp\nconst response = items[0].json;\nconst products = response.products || [];\n\nif (products.length === 0) {\n  return [{\n    json: {\n      success: false,\n      message: 'No products found matching your query.'\n    }\n  }];\n}\n\nconst formattedProducts = products.map(p => ({\n  id: p.id,\n  name: p.name,\n  price: p.price ? `R${p.price.price}` : 'Price not available',\n  inStock: p.stock?.inStock || false,\n  quantity: p.stock?.quantity || 0,\n  sku: p.sku || 'N/A',\n  description: p.description?.substring(0, 200) || ''\n}));\n\nconst message = formattedProducts.map((p, i) => \n  `${i + 1}. ${p.name}\\n   Price: ${p.price}\\n   Stock: ${p.inStock ? `${p.quantity} available` : 'Out of stock'}`\n).join('\\n\\n');\n\nreturn [{\n  json: {\n    success: true,\n    message: `Found ${products.length} product(s):\\n\\n${message}`,\n    products: formattedProducts\n  }\n}];"
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "search-wix-products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "search-wix-products": {
+      "main": [
+        [
+          {
+            "node": "format-products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 30
+  }
+}

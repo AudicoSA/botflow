@@ -1,0 +1,77 @@
+{
+  "name": "BotFlow → Calendly Booking Link",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Booking Link Request",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-calendly-{{bot_id}}",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "get-calendly-user",
+      "name": "Get Calendly User",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [450, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.calendly.com/users/me",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{credentials.calendly_api_key}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "format-booking-link",
+      "name": "Format Calendly Booking Link",
+      "type": "n8n-nodes-base.function",
+      "position": [650, 300],
+      "parameters": {
+        "functionCode": "// Format Calendly booking link with prefill data\nconst user = items[0].json.resource;\nconst data = items[0].json;\n\nconst baseUrl = user.scheduling_url;\nconst eventType = data.event_type || '{{event_type_uuid}}';\n\n// Prefill parameters\nconst params = new URLSearchParams();\nif (data.customer_name) params.append('name', data.customer_name);\nif (data.email) params.append('email', data.email);\nif (data.phone) params.append('a1', data.phone); // Custom question 1\nif (data.notes) params.append('a2', data.notes); // Custom question 2\n\nconst bookingUrl = `${baseUrl}/${eventType}?${params.toString()}`;\n\nreturn [{\n  json: {\n    success: true,\n    booking_url: bookingUrl,\n    event_type: eventType,\n    message: `Book your appointment here: ${bookingUrl}`\n  }\n}];"
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "get-calendly-user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get-calendly-user": {
+      "main": [
+        [
+          {
+            "node": "format-booking-link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 30
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "name": "BotFlow → Yoco Payment Integration",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Payment Request",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-yoco-{{bot_id}}",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "create-yoco-payment",
+      "name": "Create Yoco Payment",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [450, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://payments.yoco.com/api/checkouts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{credentials.yoco_secret_key}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "amount",
+              "value": "={{Math.round(parseFloat($json.amount) * 100)}}"
+            },
+            {
+              "name": "currency",
+              "value": "ZAR"
+            },
+            {
+              "name": "cancelUrl",
+              "value": "https://api.botflow.co.za/webhooks/yoco/cancel?bot_id={{bot_id}}"
+            },
+            {
+              "name": "successUrl",
+              "value": "https://api.botflow.co.za/webhooks/yoco/success?bot_id={{bot_id}}"
+            },
+            {
+              "name": "failureUrl",
+              "value": "https://api.botflow.co.za/webhooks/yoco/failure?bot_id={{bot_id}}"
+            },
+            {
+              "name": "metadata",
+              "value": "={\"conversation_id\": \"{{$json.conversation_id}}\", \"bot_id\": \"{{bot_id}}\", \"customer_phone\": \"{{$json.phone}}\"}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "format-response",
+      "name": "Format Payment Response",
+      "type": "n8n-nodes-base.function",
+      "position": [650, 300],
+      "parameters": {
+        "functionCode": "// Format Yoco response for WhatsApp\nconst response = items[0].json;\n\nif (response.redirectUrl) {\n  return [{\n    json: {\n      success: true,\n      payment_url: response.redirectUrl,\n      payment_id: response.id,\n      amount: (response.amount / 100).toFixed(2),\n      message: `Please complete your payment of R${(response.amount / 100).toFixed(2)} using this secure link: ${response.redirectUrl}`\n    }\n  }];\n} else {\n  return [{\n    json: {\n      success: false,\n      error: 'Failed to create payment link',\n      message: 'Sorry, we could not process your payment request. Please try again or contact support.'\n    }\n  }];\n}"
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "create-yoco-payment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create-yoco-payment": {
+      "main": [
+        [
+          {
+            "node": "format-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 30
+  }
+}

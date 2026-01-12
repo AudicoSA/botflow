@@ -1,0 +1,340 @@
+### Integration Marketplace API Tests
+### Base URL: http://localhost:3001
+
+@baseUrl = http://localhost:3001
+@authToken = YOUR_JWT_TOKEN_HERE
+@botId = YOUR_BOT_ID_HERE
+
+### ==============================================
+### PUBLIC ENDPOINTS (No Authentication Required)
+### ==============================================
+
+### 1. List All Integrations
+GET {{baseUrl}}/api/marketplace
+Content-Type: application/json
+
+### 2. List Integrations - Filter by Category (Payment)
+GET {{baseUrl}}/api/marketplace?category=payment
+Content-Type: application/json
+
+### 3. List Integrations - Filter by Category (Calendar)
+GET {{baseUrl}}/api/marketplace?category=calendar
+Content-Type: application/json
+
+### 4. List Integrations - Filter by Category (CRM)
+GET {{baseUrl}}/api/marketplace?category=crm
+Content-Type: application/json
+
+### 5. List Integrations - Filter by Vertical (e-commerce)
+GET {{baseUrl}}/api/marketplace?vertical=ecommerce
+Content-Type: application/json
+
+### 6. List Integrations - Featured Only
+GET {{baseUrl}}/api/marketplace?featured=true
+Content-Type: application/json
+
+### 7. List Integrations - Search by Name
+GET {{baseUrl}}/api/marketplace?search=paystack
+Content-Type: application/json
+
+### 8. List Integrations - Pagination
+GET {{baseUrl}}/api/marketplace?page=1&per_page=10
+Content-Type: application/json
+
+### 9. Get All Categories with Counts
+GET {{baseUrl}}/api/marketplace/categories
+Content-Type: application/json
+
+### 10. Get Specific Integration - Google Calendar
+GET {{baseUrl}}/api/marketplace/google-calendar
+Content-Type: application/json
+
+### 11. Get Specific Integration - Paystack
+GET {{baseUrl}}/api/marketplace/paystack
+Content-Type: application/json
+
+### 12. Get Specific Integration - HubSpot
+GET {{baseUrl}}/api/marketplace/hubspot
+Content-Type: application/json
+
+### 13. Get Specific Integration - Shopify
+GET {{baseUrl}}/api/marketplace/shopify
+Content-Type: application/json
+
+### ==============================================
+### AUTHENTICATED ENDPOINTS (Require JWT Token)
+### ==============================================
+
+### 14. Get Recommended Integrations for Bot
+GET {{baseUrl}}/api/marketplace/recommended/{{botId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+### 15. Enable Integration - Paystack
+POST {{baseUrl}}/api/marketplace/paystack/enable
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "bot_id": "{{botId}}",
+  "credentials": {
+    "secret_key": "sk_test_your_key_here",
+    "public_key": "pk_test_your_key_here"
+  },
+  "configuration": {
+    "currency": "ZAR",
+    "auto_verify": true
+  }
+}
+
+### 16. Enable Integration - Google Calendar
+POST {{baseUrl}}/api/marketplace/google-calendar/enable
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "bot_id": "{{botId}}",
+  "credentials": {
+    "access_token": "ya29.a0...",
+    "refresh_token": "1//...",
+    "token_type": "Bearer",
+    "expiry_date": 1640000000000
+  },
+  "configuration": {
+    "calendar_id": "primary",
+    "default_duration": 30,
+    "working_hours": {
+      "start": "09:00",
+      "end": "17:00"
+    }
+  }
+}
+
+### 17. Enable Integration - HubSpot
+POST {{baseUrl}}/api/marketplace/hubspot/enable
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "bot_id": "{{botId}}",
+  "credentials": {
+    "api_key": "your_hubspot_api_key"
+  },
+  "configuration": {
+    "auto_create_contacts": true,
+    "sync_deals": true
+  }
+}
+
+### 18. Enable Integration - Slack
+POST {{baseUrl}}/api/marketplace/slack/enable
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "bot_id": "{{botId}}",
+  "credentials": {
+    "webhook_url": "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXX"
+  },
+  "configuration": {
+    "channel": "#customer-support",
+    "notify_on": ["new_conversation", "urgent_query"]
+  }
+}
+
+### 19. Enable Integration - Shopify
+POST {{baseUrl}}/api/marketplace/shopify/enable
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "bot_id": "{{botId}}",
+  "credentials": {
+    "shop_name": "your-store",
+    "access_token": "shpat_..."
+  },
+  "configuration": {
+    "sync_orders": true,
+    "sync_products": true,
+    "order_status_updates": true
+  }
+}
+
+### 20. Get All Bot Integrations
+GET {{baseUrl}}/api/marketplace/bots/{{botId}}/integrations
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+### 21. Get Specific Bot Integration
+GET {{baseUrl}}/api/marketplace/bot-integrations/BOT_INTEGRATION_ID_HERE
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+### 22. Update Bot Integration Configuration
+PATCH {{baseUrl}}/api/marketplace/bot-integrations/BOT_INTEGRATION_ID_HERE
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "configuration": {
+    "currency": "ZAR",
+    "auto_verify": true,
+    "webhook_enabled": true
+  }
+}
+
+### 23. Update Bot Integration Credentials
+PATCH {{baseUrl}}/api/marketplace/bot-integrations/BOT_INTEGRATION_ID_HERE
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "credentials": {
+    "secret_key": "sk_test_new_key_here",
+    "public_key": "pk_test_new_key_here"
+  }
+}
+
+### 24. Update Bot Integration Status
+PATCH {{baseUrl}}/api/marketplace/bot-integrations/BOT_INTEGRATION_ID_HERE
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "status": "inactive"
+}
+
+### 25. Get Integration Logs
+GET {{baseUrl}}/api/marketplace/bot-integrations/BOT_INTEGRATION_ID_HERE/logs
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+### 26. Get Integration Logs - Limited
+GET {{baseUrl}}/api/marketplace/bot-integrations/BOT_INTEGRATION_ID_HERE/logs?limit=10
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+### 27. Disable Bot Integration
+DELETE {{baseUrl}}/api/marketplace/bot-integrations/BOT_INTEGRATION_ID_HERE
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+### ==============================================
+### COMBINED WORKFLOW TESTS
+### ==============================================
+
+### 28. Complete Integration Flow - Paystack
+# Step 1: View Paystack details
+GET {{baseUrl}}/api/marketplace/paystack
+
+###
+# Step 2: Enable Paystack for bot
+POST {{baseUrl}}/api/marketplace/paystack/enable
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "bot_id": "{{botId}}",
+  "credentials": {
+    "secret_key": "sk_test_...",
+    "public_key": "pk_test_..."
+  }
+}
+
+###
+# Step 3: View all bot integrations
+GET {{baseUrl}}/api/marketplace/bots/{{botId}}/integrations
+Authorization: Bearer {{authToken}}
+
+###
+# Step 4: View integration logs
+GET {{baseUrl}}/api/marketplace/bot-integrations/BOT_INTEGRATION_ID_HERE/logs
+Authorization: Bearer {{authToken}}
+
+### ==============================================
+### ERROR SCENARIOS
+### ==============================================
+
+### 29. Try to enable already enabled integration (should fail)
+POST {{baseUrl}}/api/marketplace/paystack/enable
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "bot_id": "{{botId}}",
+  "credentials": {
+    "secret_key": "sk_test_..."
+  }
+}
+
+### 30. Get non-existent integration (should 404)
+GET {{baseUrl}}/api/marketplace/non-existent-integration
+Content-Type: application/json
+
+### 31. Try to access bot integrations without auth (should 401)
+GET {{baseUrl}}/api/marketplace/bots/{{botId}}/integrations
+Content-Type: application/json
+
+### 32. Enable integration with missing required fields (should fail)
+POST {{baseUrl}}/api/marketplace/paystack/enable
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "bot_id": "{{botId}}",
+  "credentials": {}
+}
+
+### ==============================================
+### VERTICAL-SPECIFIC RECOMMENDATIONS
+### ==============================================
+
+### 33. Taxi Vertical - Recommended Integrations
+# Create a taxi bot, then:
+GET {{baseUrl}}/api/marketplace/recommended/TAXI_BOT_ID
+Authorization: Bearer {{authToken}}
+
+### 34. Restaurant Vertical - Recommended Integrations
+# Create a restaurant bot, then:
+GET {{baseUrl}}/api/marketplace/recommended/RESTAURANT_BOT_ID
+Authorization: Bearer {{authToken}}
+
+### 35. E-commerce Vertical - Recommended Integrations
+# Create an e-commerce bot, then:
+GET {{baseUrl}}/api/marketplace/recommended/ECOMMERCE_BOT_ID
+Authorization: Bearer {{authToken}}
+
+### 36. Medical Vertical - Recommended Integrations
+# Create a medical bot, then:
+GET {{baseUrl}}/api/marketplace/recommended/MEDICAL_BOT_ID
+Authorization: Bearer {{authToken}}
+
+### ==============================================
+### NOTES
+### ==============================================
+
+# Before running these tests:
+# 1. Replace {{authToken}} with your actual JWT token
+# 2. Replace {{botId}} with your actual bot ID
+# 3. Replace BOT_INTEGRATION_ID_HERE with actual bot integration IDs
+# 4. Make sure backend is running: npm run dev
+# 5. Make sure database migration has been run
+
+# Expected Results:
+# - Public endpoints should work without authentication
+# - Authenticated endpoints require valid JWT token
+# - Enabling same integration twice should fail with 409 Conflict
+# - Non-existent resources should return 404
+# - Missing auth should return 401
+
+# Integration Categories:
+# - calendar: Google Calendar, Outlook, Calendly, Cal.com
+# - payment: Paystack, PayFast, Yoco, Ozow, Square
+# - crm: HubSpot, Salesforce, Pipedrive, Zoho
+# - communication: Slack, Gmail, Telegram, Twilio SMS
+# - ecommerce: Shopify, WooCommerce, Wix Stores
+# - specialized: OpenTable, Mindbody, DocuSign, Zoom, Google Meet
+# - productivity: Google Sheets, Airtable, Zapier, Make
+# - analytics: Google Analytics, Mixpanel
+
+# Total Integrations: 30+

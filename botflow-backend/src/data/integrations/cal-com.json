@@ -1,0 +1,23 @@
+{
+  "name": "Cal.com",
+  "slug": "cal-com",
+  "category": "calendar",
+  "description": "Open-source scheduling integration with Cal.com",
+  "long_description": "Connect to Cal.com, the open-source Calendly alternative. Perfect for developers and businesses who prefer self-hosted or open-source solutions. Full API access for booking management.",
+  "icon_url": "https://cal.com/logo.svg",
+  "requires_auth": true,
+  "auth_type": "api_key",
+  "recommended_for_verticals": ["tutor", "lawyer", "accountant"],
+  "pricing_model": "free",
+  "is_featured": false,
+  "documentation_url": "https://developer.cal.com/",
+  "supported_features": ["create", "read", "update", "delete"],
+  "setup_instructions": {
+    "steps": [
+      "Generate API key in Cal.com Settings",
+      "Paste your API key below",
+      "Configure event type and duration"
+    ],
+    "required_fields": ["api_key"]
+  }
+}

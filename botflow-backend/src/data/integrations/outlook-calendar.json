@@ -1,0 +1,24 @@
+{
+  "name": "Microsoft Outlook Calendar",
+  "slug": "outlook-calendar",
+  "category": "calendar",
+  "description": "Sync appointments with Microsoft Outlook Calendar",
+  "long_description": "Automatically sync your WhatsApp appointments to Microsoft Outlook Calendar. Perfect for businesses using Microsoft 365 or Office 365. Supports calendar event creation, updates, and availability checking.",
+  "icon_url": "https://upload.wikimedia.org/wikipedia/commons/d/df/Microsoft_Office_Outlook_%282018%E2%80%93present%29.svg",
+  "requires_auth": true,
+  "auth_type": "oauth",
+  "recommended_for_verticals": ["medical", "salon", "gym", "doctor", "plumber", "lawyer", "accountant"],
+  "pricing_model": "free",
+  "is_featured": false,
+  "documentation_url": "https://docs.microsoft.com/en-us/graph/api/resources/calendar",
+  "supported_features": ["create", "read", "update", "delete", "availability"],
+  "setup_instructions": {
+    "steps": [
+      "Click 'Connect Outlook Calendar'",
+      "Sign in with your Microsoft account",
+      "Grant calendar access permissions",
+      "Select which calendar to use for bookings"
+    ],
+    "required_scopes": ["Calendars.ReadWrite", "Calendars.Read.Shared"]
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "name": "BotFlow → Airtable Database Sync",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "New Record",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-airtable-{{bot_id}}",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "format-record",
+      "name": "Format Airtable Record",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format data for Airtable\nconst data = items[0].json;\n\nreturn [{\n  json: {\n    fields: {\n      'Customer Name': data.customer_name || 'Unknown',\n      'Phone': data.phone || '',\n      'Email': data.email || `${data.phone}@whatsapp.botflow.co.za`,\n      'Message': data.message || '',\n      'Date': new Date().toISOString().split('T')[0],\n      'Time': new Date().toLocaleTimeString('en-ZA'),\n      'Conversation ID': data.conversation_id || '',\n      'Bot ID': '{{bot_id}}',\n      'Intent': data.intent || 'General',\n      'Status': data.status || 'New',\n      'Handoff Required': data.handoff_required ? 'Yes' : 'No',\n      'Sentiment': data.sentiment || 'Neutral',\n      'Source': 'WhatsApp Bot',\n      'Booking Date': data.booking_date || '',\n      'Booking Time': data.booking_time || '',\n      'Service': data.service || '',\n      'Amount': data.amount ? parseFloat(data.amount) : 0,\n      'Notes': data.notes || ''\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "create-airtable-record",
+      "name": "Create Airtable Record",
+      "type": "n8n-nodes-base.airtable",
+      "position": [650, 300],
+      "parameters": {
+        "operation": "create",
+        "application": "={{$json.base_id || '{{base_id}}'}}",
+        "table": "={{$json.table_name || 'Conversations'}}",
+        "fields": "={{$json.fields}}",
+        "options": {
+          "typecast": true
+        }
+      },
+      "credentials": {
+        "airtableApi": {
+          "id": "{{credentials.airtable_api_key}}",
+          "name": "Airtable API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-record": {
+      "main": [
+        [
+          {
+            "node": "create-airtable-record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 30
+  }
+}

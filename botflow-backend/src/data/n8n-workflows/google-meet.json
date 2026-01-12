@@ -1,0 +1,105 @@
+{
+  "name": "BotFlow → Google Meet",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Create Meeting",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-meet-{{bot_id}}",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "format-calendar-event",
+      "name": "Format Calendar Event with Meet",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format calendar event with Google Meet\nconst data = items[0].json;\nconst startTime = new Date(`${data.meeting_date}T${data.meeting_time}:00+02:00`);\nconst endTime = new Date(startTime.getTime() + (data.duration || 30) * 60000);\n\nreturn [{\n  json: {\n    summary: data.meeting_topic || `Consultation - ${data.customer_name || 'Client'}`,\n    description: data.agenda || 'Meeting scheduled via WhatsApp Bot',\n    start: {\n      dateTime: startTime.toISOString(),\n      timeZone: 'Africa/Johannesburg'\n    },\n    end: {\n      dateTime: endTime.toISOString(),\n      timeZone: 'Africa/Johannesburg'\n    },\n    attendees: [\n      {\n        email: data.email || `${data.phone}@whatsapp.botflow.co.za`,\n        displayName: data.customer_name || 'Client',\n        responseStatus: 'needsAction'\n      }\n    ],\n    conferenceData: {\n      createRequest: {\n        requestId: `botflow_${Date.now()}`,\n        conferenceSolutionKey: {\n          type: 'hangoutsMeet'\n        }\n      }\n    },\n    reminders: {\n      useDefault: false,\n      overrides: [\n        { method: 'email', minutes: 60 },\n        { method: 'popup', minutes: 10 }\n      ]\n    },\n    extendedProperties: {\n      private: {\n        botId: '{{bot_id}}',\n        conversationId: data.conversation_id || '',\n        source: 'WhatsApp Bot'\n      }\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "create-meet-event",
+      "name": "Create Google Calendar Event with Meet",
+      "type": "n8n-nodes-base.googleCalendar",
+      "position": [650, 300],
+      "parameters": {
+        "resource": "event",
+        "operation": "create",
+        "calendarId": "primary",
+        "summary": "={{$json.summary}}",
+        "start": "={{$json.start.dateTime}}",
+        "end": "={{$json.end.dateTime}}",
+        "additionalFields": {
+          "description": "={{$json.description}}",
+          "attendees": "={{$json.attendees}}",
+          "conferenceDataVersion": 1,
+          "sendUpdates": "all"
+        },
+        "options": {
+          "conferenceData": "={{$json.conferenceData}}"
+        }
+      },
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "{{credentials.google_calendar_oauth}}",
+          "name": "Google Calendar OAuth2"
+        }
+      }
+    },
+    {
+      "id": "format-response",
+      "name": "Format Meet Response",
+      "type": "n8n-nodes-base.function",
+      "position": [850, 300],
+      "parameters": {
+        "functionCode": "// Format Google Meet response\nconst event = items[0].json;\n\nif (event.conferenceData?.entryPoints) {\n  const meetLink = event.conferenceData.entryPoints.find(e => e.entryPointType === 'video')?.uri || event.hangoutLink;\n  \n  return [{\n    json: {\n      success: true,\n      event_id: event.id,\n      meet_link: meetLink,\n      start_time: event.start?.dateTime || '',\n      message: `Your Google Meet is scheduled!\\n\\nTopic: ${event.summary}\\nDate: ${new Date(event.start?.dateTime).toLocaleString('en-ZA')}\\n\\nJoin link: ${meetLink}`\n    }\n  }];\n} else {\n  return [{\n    json: {\n      success: false,\n      error: 'Failed to create Google Meet',\n      message: 'Sorry, we could not create your Google Meet. Please try again.'\n    }\n  }];\n}"
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-calendar-event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-calendar-event": {
+      "main": [
+        [
+          {
+            "node": "create-meet-event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create-meet-event": {
+      "main": [
+        [
+          {
+            "node": "format-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 45
+  }
+}

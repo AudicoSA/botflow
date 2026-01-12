@@ -1,0 +1,135 @@
+{
+  "name": "BotFlow → Salesforce CRM",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "New Lead",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-salesforce-{{bot_id}}",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "format-lead",
+      "name": "Format Salesforce Lead",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format lead for Salesforce\nconst data = items[0].json;\nconst nameParts = (data.customer_name || 'WhatsApp User').split(' ');\n\nreturn [{\n  json: {\n    LastName: nameParts.slice(-1)[0] || 'User',\n    FirstName: nameParts.slice(0, -1).join(' ') || 'WhatsApp',\n    Company: data.company || 'Self',\n    Phone: data.phone || '',\n    Email: data.email || `${data.phone}@whatsapp.botflow.co.za`,\n    LeadSource: 'WhatsApp Bot',\n    Status: 'New',\n    Description: data.message || data.inquiry || '',\n    Industry: data.industry || '',\n    Rating: 'Warm',\n    BotFlow_Bot_ID__c: '{{bot_id}}',\n    BotFlow_Conversation_ID__c: data.conversation_id || '',\n    BotFlow_Vertical__c: data.vertical || 'General'\n  }\n}];"
+      }
+    },
+    {
+      "id": "create-salesforce-lead",
+      "name": "Create Salesforce Lead",
+      "type": "n8n-nodes-base.salesforce",
+      "position": [650, 300],
+      "parameters": {
+        "resource": "lead",
+        "operation": "create",
+        "lastName": "={{$json.LastName}}",
+        "company": "={{$json.Company}}",
+        "additionalFields": {
+          "firstName": "={{$json.FirstName}}",
+          "phone": "={{$json.Phone}}",
+          "email": "={{$json.Email}}",
+          "leadSource": "={{$json.LeadSource}}",
+          "status": "={{$json.Status}}",
+          "description": "={{$json.Description}}",
+          "industry": "={{$json.Industry}}",
+          "rating": "={{$json.Rating}}",
+          "customFieldsUi": {
+            "customFieldsValues": [
+              {
+                "fieldId": "BotFlow_Bot_ID__c",
+                "value": "={{$json.BotFlow_Bot_ID__c}}"
+              },
+              {
+                "fieldId": "BotFlow_Conversation_ID__c",
+                "value": "={{$json.BotFlow_Conversation_ID__c}}"
+              },
+              {
+                "fieldId": "BotFlow_Vertical__c",
+                "value": "={{$json.BotFlow_Vertical__c}}"
+              }
+            ]
+          }
+        }
+      },
+      "credentials": {
+        "salesforceOAuth2Api": {
+          "id": "{{credentials.salesforce_oauth}}",
+          "name": "Salesforce OAuth2"
+        }
+      }
+    },
+    {
+      "id": "create-task",
+      "name": "Create Follow-up Task",
+      "type": "n8n-nodes-base.salesforce",
+      "position": [850, 300],
+      "parameters": {
+        "resource": "task",
+        "operation": "create",
+        "subject": "Follow up with WhatsApp lead - {{$json.FirstName}} {{$json.LastName}}",
+        "additionalFields": {
+          "whoId": "={{$node['Create Salesforce Lead'].json.id}}",
+          "status": "Not Started",
+          "priority": "Normal",
+          "activityDate": "={{new Date(Date.now() + 86400000).toISOString().split('T')[0]}}",
+          "description": "Follow up with lead from WhatsApp Bot conversation"
+        }
+      },
+      "credentials": {
+        "salesforceOAuth2Api": {
+          "id": "{{credentials.salesforce_oauth}}",
+          "name": "Salesforce OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-lead": {
+      "main": [
+        [
+          {
+            "node": "create-salesforce-lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create-salesforce-lead": {
+      "main": [
+        [
+          {
+            "node": "create-task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 45
+  }
+}

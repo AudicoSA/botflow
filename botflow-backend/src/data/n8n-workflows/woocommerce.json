@@ -1,0 +1,93 @@
+{
+  "name": "BotFlow → WooCommerce Order Sync",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Order Query",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-woocommerce-{{bot_id}}",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "extract-order-id",
+      "name": "Extract Order Information",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Extract order query\nconst data = items[0].json;\n\nreturn [{\n  json: {\n    order_id: data.order_id || '',\n    customer_email: data.email || '',\n    customer_phone: data.phone || '',\n    query_type: data.query_type || 'status' // status, tracking, products\n  }\n}];"
+      }
+    },
+    {
+      "id": "get-woocommerce-order",
+      "name": "Get WooCommerce Order",
+      "type": "n8n-nodes-base.wooCommerce",
+      "position": [650, 300],
+      "parameters": {
+        "resource": "order",
+        "operation": "get",
+        "orderId": "={{$json.order_id}}"
+      },
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "{{credentials.woocommerce_api}}",
+          "name": "WooCommerce API"
+        }
+      }
+    },
+    {
+      "id": "format-order-response",
+      "name": "Format Order Response",
+      "type": "n8n-nodes-base.function",
+      "position": [850, 300],
+      "parameters": {
+        "functionCode": "// Format WooCommerce order for WhatsApp\nconst order = items[0].json;\n\nif (!order || !order.id) {\n  return [{\n    json: {\n      success: false,\n      message: 'Order not found. Please check your order number and try again.'\n    }\n  }];\n}\n\nconst items = order.line_items?.map(item => \n  `- ${item.name} (x${item.quantity}) - R${item.total}`\n).join('\\n') || 'No items';\n\nconst statusMap = {\n  'pending': '⏳ Pending payment',\n  'processing': '📦 Processing',\n  'on-hold': '⏸️ On hold',\n  'completed': '✅ Completed',\n  'cancelled': '❌ Cancelled',\n  'refunded': '💰 Refunded',\n  'failed': '❌ Failed'\n};\n\nconst message = `Order #${order.number}\\n\\nStatus: ${statusMap[order.status] || order.status}\\n\\nItems:\\n${items}\\n\\nTotal: R${order.total}\\n${order.date_paid ? `Paid: ${new Date(order.date_paid).toLocaleDateString('en-ZA')}` : ''}\\n${order.date_completed ? `Completed: ${new Date(order.date_completed).toLocaleDateString('en-ZA')}` : ''}`;\n\nreturn [{\n  json: {\n    success: true,\n    order_id: order.id,\n    order_number: order.number,\n    status: order.status,\n    total: order.total,\n    message: message\n  }\n}];"
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "extract-order-id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extract-order-id": {
+      "main": [
+        [
+          {
+            "node": "get-woocommerce-order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get-woocommerce-order": {
+      "main": [
+        [
+          {
+            "node": "format-order-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 45
+  }
+}

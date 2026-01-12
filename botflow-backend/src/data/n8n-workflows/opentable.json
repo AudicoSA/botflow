@@ -1,0 +1,105 @@
+{
+  "name": "BotFlow → OpenTable Reservation Sync",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Restaurant Booking",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-opentable-{{bot_id}}",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "format-reservation",
+      "name": "Format Reservation Data",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format booking for OpenTable\nconst data = items[0].json;\n\nreturn [{\n  json: {\n    restaurantId: data.restaurant_id || '{{restaurant_id}}',\n    partySize: parseInt(data.party_size || 2),\n    dateTime: `${data.booking_date}T${data.booking_time}:00`,\n    customer: {\n      firstName: data.customer_name?.split(' ')[0] || 'Guest',\n      lastName: data.customer_name?.split(' ').slice(1).join(' ') || 'User',\n      phone: data.phone || '',\n      email: data.email || `${data.phone}@whatsapp.botflow.co.za`\n    },\n    specialRequests: data.dietary_requirements || data.special_requests || '',\n    occasion: data.occasion || '',\n    source: 'WhatsApp Bot',\n    metadata: {\n      botId: '{{bot_id}}',\n      conversationId: data.conversation_id || ''\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "create-opentable-reservation",
+      "name": "Create OpenTable Reservation",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [650, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://platform.opentable.com/sync/reservations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{credentials.opentable_api_key}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {}
+      }
+    },
+    {
+      "id": "format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.function",
+      "position": [850, 300],
+      "parameters": {
+        "functionCode": "// Format OpenTable response\nconst response = items[0].json;\n\nif (response.confirmationNumber) {\n  return [{\n    json: {\n      success: true,\n      confirmation_number: response.confirmationNumber,\n      status: response.status || 'confirmed',\n      message: `Your reservation is confirmed! Confirmation number: ${response.confirmationNumber}`\n    }\n  }];\n} else {\n  return [{\n    json: {\n      success: false,\n      error: response.error || 'Reservation failed',\n      message: 'Sorry, we could not complete your reservation. Please try again or call us directly.'\n    }\n  }];\n}"
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-reservation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-reservation": {
+      "main": [
+        [
+          {
+            "node": "create-opentable-reservation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create-opentable-reservation": {
+      "main": [
+        [
+          {
+            "node": "format-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 45
+  }
+}

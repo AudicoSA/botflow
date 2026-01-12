@@ -1,0 +1,174 @@
+### Test Template API Endpoints
+### Use with REST Client extension in VS Code or copy to Postman
+
+### Variables (replace with your actual values)
+@baseUrl = http://localhost:3001
+@templateId = your-template-id-here
+@jwtToken = your-jwt-token-here
+
+###############################################
+# PUBLIC ENDPOINTS (No Auth Required)
+###############################################
+
+### 1. Get all published templates
+GET {{baseUrl}}/api/templates
+Content-Type: application/json
+
+### 2. Get specific template by ID
+GET {{baseUrl}}/api/templates/{{templateId}}
+Content-Type: application/json
+
+### 3. Get templates by vertical (e.g., taxi)
+GET {{baseUrl}}/api/templates/vertical/taxi
+Content-Type: application/json
+
+###############################################
+# ADMIN ENDPOINTS (Auth Required)
+###############################################
+
+### 4. Create new template (requires authentication)
+POST {{baseUrl}}/api/templates
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "name": "Test Restaurant Template",
+  "vertical": "restaurant",
+  "tier": 2,
+  "description": "Automate table bookings and menu inquiries for your restaurant",
+  "tagline": "Reserve tables instantly",
+  "icon": "🍽️",
+  "required_fields": {
+    "restaurant_name": {
+      "type": "text",
+      "label": "Restaurant Name",
+      "placeholder": "e.g. The Hungry Lion",
+      "required": true
+    },
+    "cuisine_type": {
+      "type": "text",
+      "label": "Cuisine Type",
+      "placeholder": "e.g. Italian, Indian, Steakhouse",
+      "required": true
+    },
+    "seating_capacity": {
+      "type": "number",
+      "label": "Seating Capacity",
+      "placeholder": "e.g. 50",
+      "required": true
+    },
+    "booking_hours": {
+      "type": "text",
+      "label": "Booking Hours",
+      "placeholder": "e.g. 12pm-10pm",
+      "required": true
+    }
+  },
+  "conversation_flow": {
+    "systemPrompt": "You are a friendly restaurant booking assistant for {{restaurant_name}}. Help customers make reservations, answer menu questions, and provide information about {{cuisine_type}} cuisine.",
+    "welcomeMessage": "Welcome to {{restaurant_name}}! 🍽️ How can I help you today?",
+    "rules": [
+      "Always confirm date, time, and number of guests",
+      "Check availability before confirming",
+      "Mention any special dietary options"
+    ]
+  },
+  "example_prompts": [
+    "I'd like to book a table for 4 tonight",
+    "What's on the menu?",
+    "Do you have vegetarian options?"
+  ],
+  "integrations": ["calendar", "payment"],
+  "is_published": false
+}
+
+### 5. Update template (requires authentication)
+PATCH {{baseUrl}}/api/templates/{{templateId}}
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "description": "Updated description for taxi service automation",
+  "is_published": true
+}
+
+### 6. Delete template (requires authentication)
+DELETE {{baseUrl}}/api/templates/{{templateId}}
+Authorization: Bearer {{jwtToken}}
+
+###############################################
+# TESTING WORKFLOW
+###############################################
+
+# Step 1: Start the backend server
+# cd botflow-backend && npm run dev
+
+# Step 2: Seed the taxi template (if not already done)
+# node dist/scripts/seed-templates.js
+
+# Step 3: Get all templates (should see taxi template)
+# Use endpoint #1 above
+
+# Step 4: Copy a template ID from the response
+# Update @templateId variable above
+
+# Step 5: Get that specific template
+# Use endpoint #2 above
+
+# Step 6: Test vertical filtering
+# Use endpoint #3 above
+
+# Step 7: To test admin endpoints, get a JWT token
+# Login via /api/auth/login endpoint
+# Copy the token to @jwtToken variable
+
+# Step 8: Test creating a new template
+# Use endpoint #4 above
+
+###############################################
+# EXPECTED RESPONSES
+###############################################
+
+# Success - GET all templates:
+# {
+#   "templates": [
+#     {
+#       "id": "uuid",
+#       "name": "Taxi & Shuttle Service",
+#       "vertical": "taxi",
+#       "tier": 1,
+#       ...
+#     }
+#   ]
+# }
+
+# Success - GET single template:
+# {
+#   "template": {
+#     "id": "uuid",
+#     "name": "Taxi & Shuttle Service",
+#     ...
+#   }
+# }
+
+# Success - POST create template:
+# Status: 201 Created
+# {
+#   "template": {
+#     "id": "new-uuid",
+#     ...
+#   }
+# }
+
+# Error - Template not found:
+# Status: 404
+# {
+#   "error": "Template not found"
+# }
+
+# Error - Validation failed:
+# Status: 400
+# {
+#   "error": "Validation error",
+#   "details": [...]
+# }

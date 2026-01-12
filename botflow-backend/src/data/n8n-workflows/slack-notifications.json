@@ -1,0 +1,77 @@
+{
+  "name": "BotFlow → Slack Notifications",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "New Booking Received",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-slack-{{bot_id}}",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "format-message",
+      "name": "Format Slack Message",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format booking data for Slack\nconst booking = items[0].json;\n\nconst message = {\n  text: '🎉 New Booking Received!',\n  blocks: [\n    {\n      type: 'header',\n      text: {\n        type: 'plain_text',\n        text: '🎉 New Booking Received!'\n      }\n    },\n    {\n      type: 'section',\n      fields: [\n        {\n          type: 'mrkdwn',\n          text: `*Customer:*\\n${booking.customer_name || 'Unknown'}`\n        },\n        {\n          type: 'mrkdwn',\n          text: `*Phone:*\\n${booking.phone || 'N/A'}`\n        },\n        {\n          type: 'mrkdwn',\n          text: `*Date:*\\n${booking.booking_date || 'N/A'}`\n        },\n        {\n          type: 'mrkdwn',\n          text: `*Time:*\\n${booking.booking_time || 'N/A'}`\n        }\n      ]\n    },\n    {\n      type: 'section',\n      text: {\n        type: 'mrkdwn',\n        text: `*Details:*\\n${booking.details || 'No additional details'}`\n      }\n    },\n    {\n      type: 'context',\n      elements: [\n        {\n          type: 'mrkdwn',\n          text: `Bot ID: ${booking.bot_id || 'N/A'} | Conversation: ${booking.conversation_id || 'N/A'}`\n        }\n      ]\n    }\n  ]\n};\n\nreturn [{ json: message }];"
+      }
+    },
+    {
+      "id": "send-to-slack",
+      "name": "Send to Slack Channel",
+      "type": "n8n-nodes-base.slack",
+      "position": [650, 300],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channel": "={{$json.channel || '#bookings'}}",
+        "text": "={{$json.text}}",
+        "blocksUi": {
+          "blocksValues": "={{$json.blocks}}"
+        }
+      },
+      "credentials": {
+        "slackApi": {
+          "id": "{{credentials.slack_api_token}}",
+          "name": "Slack API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-message": {
+      "main": [
+        [
+          {
+            "node": "send-to-slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 30
+  }
+}

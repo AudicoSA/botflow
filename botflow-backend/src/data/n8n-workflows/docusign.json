@@ -1,0 +1,107 @@
+{
+  "name": "BotFlow → DocuSign Document Signing",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Send Document for Signature",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-docusign-{{bot_id}}",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "format-envelope",
+      "name": "Create DocuSign Envelope",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format DocuSign envelope\nconst data = items[0].json;\n\nreturn [{\n  json: {\n    emailSubject: data.document_subject || 'Please sign this document',\n    documents: [\n      {\n        documentBase64: data.document_base64 || '',\n        name: data.document_name || 'Document.pdf',\n        fileExtension: 'pdf',\n        documentId: '1'\n      }\n    ],\n    recipients: {\n      signers: [\n        {\n          email: data.signer_email || `${data.phone}@whatsapp.botflow.co.za`,\n          name: data.signer_name || 'Client',\n          recipientId: '1',\n          routingOrder: '1',\n          tabs: {\n            signHereTabs: [\n              {\n                anchorString: '/s1/',\n                anchorUnits: 'pixels',\n                anchorXOffset: '20',\n                anchorYOffset: '10'\n              }\n            ],\n            dateSignedTabs: [\n              {\n                anchorString: '/d1/',\n                anchorUnits: 'pixels',\n                anchorXOffset: '20',\n                anchorYOffset: '10'\n              }\n            ]\n          }\n        }\n      ]\n    },\n    status: 'sent',\n    customFields: {\n      textCustomFields: [\n        {\n          name: 'botId',\n          value: '{{bot_id}}'\n        },\n        {\n          name: 'conversationId',\n          value: data.conversation_id || ''\n        }\n      ]\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "send-envelope",
+      "name": "Send DocuSign Envelope",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [650, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://demo.docusign.net/restapi/v2.1/accounts/{{account_id}}/envelopes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {}
+      },
+      "credentials": {
+        "docusignOAuth2Api": {
+          "id": "{{credentials.docusign_oauth}}",
+          "name": "DocuSign OAuth2"
+        }
+      }
+    },
+    {
+      "id": "format-response",
+      "name": "Format Signing Response",
+      "type": "n8n-nodes-base.function",
+      "position": [850, 300],
+      "parameters": {
+        "functionCode": "// Format DocuSign response\nconst response = items[0].json;\n\nif (response.envelopeId) {\n  return [{\n    json: {\n      success: true,\n      envelope_id: response.envelopeId,\n      status: response.status || 'sent',\n      signing_url: response.uri || '',\n      message: 'Document sent for signature! Please check your email to sign the document.'\n    }\n  }];\n} else {\n  return [{\n    json: {\n      success: false,\n      error: response.message || 'Failed to send document',\n      message: 'Sorry, we could not send the document for signature. Please try again.'\n    }\n  }];\n}"
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-envelope",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-envelope": {
+      "main": [
+        [
+          {
+            "node": "send-envelope",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send-envelope": {
+      "main": [
+        [
+          {
+            "node": "format-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 60
+  }
+}

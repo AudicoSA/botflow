@@ -1,0 +1,114 @@
+{
+  "name": "BotFlow → HubSpot CRM",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "WhatsApp Message Received",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-hubspot-{{bot_id}}",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "extract-data",
+      "name": "Extract Customer Data",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Extract customer info from WhatsApp message\nconst phone = items[0].json.from;\nconst name = items[0].json.contact_name || 'WhatsApp User';\nconst message = items[0].json.body;\nconst conversationId = items[0].json.conversation_id;\n\nreturn [{\n  json: {\n    phone,\n    name,\n    message,\n    conversationId,\n    source: 'WhatsApp Bot',\n    timestamp: new Date().toISOString()\n  }\n}];"
+      }
+    },
+    {
+      "id": "hubspot-create-contact",
+      "name": "Create/Update HubSpot Contact",
+      "type": "n8n-nodes-base.hubspot",
+      "position": [650, 300],
+      "parameters": {
+        "resource": "contact",
+        "operation": "upsert",
+        "email": "={{$json.phone}}@whatsapp.botflow.co.za",
+        "additionalFields": {
+          "phone": "={{$json.phone}}",
+          "firstname": "={{$json.name}}",
+          "lifecyclestage": "lead",
+          "hs_lead_status": "NEW",
+          "hs_lead_source": "WhatsApp Bot",
+          "hs_latest_message": "={{$json.message}}",
+          "hs_latest_message_date": "={{$json.timestamp}}"
+        }
+      },
+      "credentials": {
+        "hubspotApi": {
+          "id": "{{credentials.hubspot_api_key}}",
+          "name": "HubSpot API"
+        }
+      }
+    },
+    {
+      "id": "create-note",
+      "name": "Create Note in HubSpot",
+      "type": "n8n-nodes-base.hubspot",
+      "position": [850, 300],
+      "parameters": {
+        "resource": "engagement",
+        "operation": "create",
+        "engagementType": "note",
+        "noteBody": "WhatsApp Message: {{$json.message}}\n\nReceived at: {{$json.timestamp}}\nConversation ID: {{$json.conversationId}}",
+        "associations": {
+          "contactId": "={{$node['Create/Update HubSpot Contact'].json.id}}"
+        }
+      },
+      "credentials": {
+        "hubspotApi": {
+          "id": "{{credentials.hubspot_api_key}}",
+          "name": "HubSpot API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "extract-data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extract-data": {
+      "main": [
+        [
+          {
+            "node": "hubspot-create-contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "hubspot-create-contact": {
+      "main": [
+        [
+          {
+            "node": "create-note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 60
+  }
+}

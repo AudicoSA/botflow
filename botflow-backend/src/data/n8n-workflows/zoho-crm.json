@@ -1,0 +1,82 @@
+{
+  "name": "BotFlow → Zoho CRM",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "New Lead",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-zoho-{{bot_id}}",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "format-zoho-lead",
+      "name": "Format Zoho Lead",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format lead for Zoho CRM\nconst data = items[0].json;\nconst nameParts = (data.customer_name || 'WhatsApp User').split(' ');\n\nreturn [{\n  json: {\n    data: [\n      {\n        Last_Name: nameParts.slice(-1)[0] || 'User',\n        First_Name: nameParts.slice(0, -1).join(' ') || 'WhatsApp',\n        Company: data.company || 'Self',\n        Phone: data.phone || '',\n        Email: data.email || `${data.phone}@whatsapp.botflow.co.za`,\n        Lead_Source: 'WhatsApp Bot',\n        Lead_Status: 'Not Contacted',\n        Description: data.message || data.inquiry || '',\n        BotFlow_Bot_ID: '{{bot_id}}',\n        BotFlow_Conversation_ID: data.conversation_id || ''\n      }\n    ]\n  }\n}];"
+      }
+    },
+    {
+      "id": "create-zoho-lead",
+      "name": "Create Zoho Lead",
+      "type": "n8n-nodes-base.zohoCrm",
+      "position": [650, 300],
+      "parameters": {
+        "resource": "lead",
+        "operation": "create",
+        "lastName": "={{$json.data[0].Last_Name}}",
+        "additionalFields": {
+          "firstName": "={{$json.data[0].First_Name}}",
+          "company": "={{$json.data[0].Company}}",
+          "phone": "={{$json.data[0].Phone}}",
+          "email": "={{$json.data[0].Email}}",
+          "leadSource": "={{$json.data[0].Lead_Source}}",
+          "leadStatus": "={{$json.data[0].Lead_Status}}",
+          "description": "={{$json.data[0].Description}}"
+        }
+      },
+      "credentials": {
+        "zohoCrmOAuth2Api": {
+          "id": "{{credentials.zoho_oauth}}",
+          "name": "Zoho CRM OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-zoho-lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-zoho-lead": {
+      "main": [
+        [
+          {
+            "node": "create-zoho-lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 30
+  }
+}

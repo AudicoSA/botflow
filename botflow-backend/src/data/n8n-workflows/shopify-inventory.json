@@ -1,0 +1,97 @@
+{
+  "name": "BotFlow → Shopify Inventory Sync",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Product Inquiry",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-shopify-{{bot_id}}",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "extract-product-query",
+      "name": "Extract Product Query",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Extract product search query from WhatsApp message\nconst message = items[0].json.message || '';\nconst productSku = items[0].json.product_sku || '';\nconst productId = items[0].json.product_id || '';\n\nreturn [{\n  json: {\n    query: message,\n    sku: productSku,\n    productId: productId,\n    conversationId: items[0].json.conversation_id\n  }\n}];"
+      }
+    },
+    {
+      "id": "search-shopify",
+      "name": "Search Shopify Products",
+      "type": "n8n-nodes-base.shopify",
+      "position": [650, 300],
+      "parameters": {
+        "resource": "product",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 5,
+        "options": {
+          "title": "={{$json.query}}"
+        }
+      },
+      "credentials": {
+        "shopifyApi": {
+          "id": "{{credentials.shopify_api_key}}",
+          "name": "Shopify API"
+        }
+      }
+    },
+    {
+      "id": "format-response",
+      "name": "Format Product Response",
+      "type": "n8n-nodes-base.function",
+      "position": [850, 300],
+      "parameters": {
+        "functionCode": "// Format product data for WhatsApp response\nconst products = items;\n\nif (products.length === 0) {\n  return [{\n    json: {\n      success: false,\n      message: 'No products found matching your query.',\n      products: []\n    }\n  }];\n}\n\nconst formattedProducts = products.map(item => {\n  const product = item.json;\n  const variant = product.variants?.[0] || {};\n  \n  return {\n    id: product.id,\n    title: product.title,\n    price: variant.price ? `R${variant.price}` : 'Price not available',\n    inStock: variant.inventory_quantity > 0,\n    quantity: variant.inventory_quantity || 0,\n    sku: variant.sku || 'N/A',\n    description: product.body_html?.replace(/<[^>]*>/g, '').substring(0, 200) || 'No description'\n  };\n});\n\nconst message = formattedProducts.map((p, i) => \n  `${i + 1}. ${p.title}\\n   Price: ${p.price}\\n   Stock: ${p.inStock ? `${p.quantity} available` : 'Out of stock'}\\n   SKU: ${p.sku}`\n).join('\\n\\n');\n\nreturn [{\n  json: {\n    success: true,\n    message: `Found ${products.length} product(s):\\n\\n${message}`,\n    products: formattedProducts\n  }\n}];"
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "extract-product-query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extract-product-query": {
+      "main": [
+        [
+          {
+            "node": "search-shopify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "search-shopify": {
+      "main": [
+        [
+          {
+            "node": "format-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 45
+  }
+}

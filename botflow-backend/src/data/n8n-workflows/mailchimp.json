@@ -1,0 +1,87 @@
+{
+  "name": "BotFlow → Mailchimp Contact Sync",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "New Contact",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-mailchimp-{{bot_id}}",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "format-contact",
+      "name": "Format Contact Data",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format contact for Mailchimp\nconst contact = items[0].json;\n\nreturn [{\n  json: {\n    email: contact.email || `${contact.phone}@whatsapp.botflow.co.za`,\n    firstName: contact.name?.split(' ')[0] || 'WhatsApp',\n    lastName: contact.name?.split(' ').slice(1).join(' ') || 'User',\n    phone: contact.phone || '',\n    tags: [\n      'WhatsApp Bot',\n      contact.vertical || 'General',\n      contact.source || 'Conversation'\n    ],\n    merge_fields: {\n      PHONE: contact.phone || '',\n      SOURCE: 'WhatsApp Bot',\n      BOTID: '{{bot_id}}',\n      CONVID: contact.conversation_id || '',\n      VERTICAL: contact.vertical || 'General'\n    },\n    timestamp: new Date().toISOString()\n  }\n}];"
+      }
+    },
+    {
+      "id": "add-to-mailchimp",
+      "name": "Add/Update Mailchimp Contact",
+      "type": "n8n-nodes-base.mailchimp",
+      "position": [650, 300],
+      "parameters": {
+        "operation": "upsert",
+        "list": "={{$json.list_id || '{{list_id}}'}}",
+        "email": "={{$json.email}}",
+        "updateFields": {
+          "firstName": "={{$json.firstName}}",
+          "lastName": "={{$json.lastName}}",
+          "mergeFields": {
+            "mergeFieldsValues": "={{$json.merge_fields}}"
+          },
+          "tags": {
+            "tagsValues": "={{$json.tags}}"
+          }
+        },
+        "options": {
+          "status": "subscribed",
+          "skipMergeValidation": true
+        }
+      },
+      "credentials": {
+        "mailchimpApi": {
+          "id": "{{credentials.mailchimp_api_key}}",
+          "name": "Mailchimp API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-contact": {
+      "main": [
+        [
+          {
+            "node": "add-to-mailchimp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 30
+  }
+}

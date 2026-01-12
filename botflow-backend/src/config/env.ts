@@ -24,6 +24,9 @@ const envSchema = z.object({
     // OpenAI
     OPENAI_API_KEY: z.string(),
 
+    // Anthropic (for Ralph Template Assistant)
+    ANTHROPIC_API_KEY: z.string().optional(),
+
     // Redis (optional - only needed for message queue)
     REDIS_HOST: z.string().optional(),
     REDIS_PORT: z.string().optional(),
@@ -34,9 +37,14 @@ const envSchema = z.object({
     N8N_API_KEY: z.string().optional(),
     N8N_WEBHOOK_URL: z.string().url().optional(),
 
-    // Stripe
-    STRIPE_SECRET_KEY: z.string(),
-    STRIPE_WEBHOOK_SECRET: z.string(),
+    // Stripe (deprecated for SA - use Paystack)
+    STRIPE_SECRET_KEY: z.string().optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().optional(),
+
+    // Paystack (South Africa)
+    PAYSTACK_SECRET_KEY: z.string().optional(),
+    PAYSTACK_PUBLIC_KEY: z.string().optional(),
+    PAYSTACK_WEBHOOK_SECRET: z.string().optional(),
 
     // JWT
     JWT_SECRET: z.string(),

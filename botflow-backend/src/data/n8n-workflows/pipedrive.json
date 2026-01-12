@@ -1,0 +1,106 @@
+{
+  "name": "BotFlow → Pipedrive Sales Pipeline",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "New Deal",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-pipedrive-{{bot_id}}",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "create-person",
+      "name": "Create/Update Person",
+      "type": "n8n-nodes-base.pipedrive",
+      "position": [450, 300],
+      "parameters": {
+        "resource": "person",
+        "operation": "create",
+        "name": "={{$json.customer_name || 'WhatsApp User'}}",
+        "additionalFields": {
+          "phone": "={{$json.phone}}",
+          "email": "={{$json.email || `${$json.phone}@whatsapp.botflow.co.za`}}",
+          "customProperties": {
+            "property": [
+              {
+                "name": "botflow_bot_id",
+                "value": "{{bot_id}}"
+              },
+              {
+                "name": "botflow_conversation_id",
+                "value": "={{$json.conversation_id}}"
+              }
+            ]
+          }
+        }
+      },
+      "credentials": {
+        "pipedriveApi": {
+          "id": "{{credentials.pipedrive_api_key}}",
+          "name": "Pipedrive API"
+        }
+      }
+    },
+    {
+      "id": "create-deal",
+      "name": "Create Deal",
+      "type": "n8n-nodes-base.pipedrive",
+      "position": [650, 300],
+      "parameters": {
+        "resource": "deal",
+        "operation": "create",
+        "title": "={{$json.deal_title || `WhatsApp Inquiry - ${$json.customer_name}`}}",
+        "associateWith": "person",
+        "personId": "={{$node['Create/Update Person'].json.id}}",
+        "additionalFields": {
+          "value": "={{parseFloat($json.deal_value || 0)}}",
+          "currency": "ZAR",
+          "status": "open",
+          "probability": 50,
+          "expectedCloseDate": "={{new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]}}"
+        }
+      },
+      "credentials": {
+        "pipedriveApi": {
+          "id": "{{credentials.pipedrive_api_key}}",
+          "name": "Pipedrive API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "create-person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create-person": {
+      "main": [
+        [
+          {
+            "node": "create-deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 30
+  }
+}

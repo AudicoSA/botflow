@@ -15,6 +15,7 @@ import whatsappRoutes from './routes/whatsapp.js';
 import botRoutes from './routes/bots.js';
 import conversationRoutes from './routes/conversations.js';
 import webhookRoutes from './routes/webhooks.js';
+import templateRoutes from './routes/templates.js';
 
 const fastify = Fastify({
     logger: logger,
@@ -104,6 +105,12 @@ fastify.setErrorHandler((error, request, reply) => {
 
 import knowledgeRoutes from './routes/knowledge.js';
 import integrationRoutes from './routes/integrations.js';
+import { propertiesRoutes } from './routes/properties.js';
+import { schedulerService } from './services/scheduler.service.js';
+import calendarRoutes from './routes/calendar.js';
+import paymentRoutes from './routes/payments.js';
+import marketplaceRoutes from './routes/marketplace.js';
+import ralphRoutes from './routes/ralph.js';
 
 // Register routes
 await fastify.register(healthRoutes, { prefix: '/health' });
@@ -111,10 +118,16 @@ await fastify.register(authRoutes, { prefix: '/api/auth' });
 await fastify.register(organizationRoutes, { prefix: '/api/organizations' });
 await fastify.register(whatsappRoutes, { prefix: '/api/whatsapp' });
 await fastify.register(botRoutes, { prefix: '/api/bots' });
+await fastify.register(templateRoutes, { prefix: '/api/templates' });
 await fastify.register(knowledgeRoutes, { prefix: '/api' }); // prefixes: /api/bots/:id/knowledge
 await fastify.register(integrationRoutes, { prefix: '/api/integrations' });
+await fastify.register(calendarRoutes, { prefix: '/api/calendar' });
+await fastify.register(paymentRoutes, { prefix: '/api/payments' });
+await fastify.register(marketplaceRoutes, { prefix: '/api/marketplace' });
+await fastify.register(propertiesRoutes, { prefix: '/api' });
 await fastify.register(conversationRoutes, { prefix: '/api/conversations' });
 await fastify.register(webhookRoutes, { prefix: '/webhooks' });
+await fastify.register(ralphRoutes, { prefix: '/api/ralph' });
 
 // Start server
 const start = async () => {
@@ -126,6 +139,10 @@ const start = async () => {
 
         fastify.log.info(`🚀 Server running on http://${env.HOST}:${env.PORT}`);
         fastify.log.info(`📝 Environment: ${env.NODE_ENV}`);
+
+        // Start scheduled tasks (property calendar sync)
+        schedulerService.start();
+        fastify.log.info(`⏰ Scheduler started`);
     } catch (err) {
         fastify.log.error(err);
         process.exit(1);
@@ -139,6 +156,7 @@ const signals = ['SIGINT', 'SIGTERM'];
 signals.forEach((signal) => {
     process.on(signal, async () => {
         fastify.log.info(`Received ${signal}, closing server...`);
+        schedulerService.stop();
         await fastify.close();
         process.exit(0);
     });

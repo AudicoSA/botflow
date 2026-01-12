@@ -1,0 +1,79 @@
+{
+  "name": "BotFlow → Google Analytics Event Tracking",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Track Event",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "botflow-ga-{{bot_id}}",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "format-ga-event",
+      "name": "Format GA4 Event",
+      "type": "n8n-nodes-base.function",
+      "position": [450, 300],
+      "parameters": {
+        "functionCode": "// Format event for Google Analytics 4\nconst data = items[0].json;\n\nreturn [{\n  json: {\n    client_id: data.conversation_id || `wa_${data.phone}`,\n    events: [\n      {\n        name: data.event_name || 'whatsapp_message',\n        params: {\n          event_category: data.event_category || 'WhatsApp',\n          event_label: data.event_label || 'Message Received',\n          value: data.value || 1,\n          bot_id: '{{bot_id}}',\n          customer_phone: data.phone || '',\n          intent: data.intent || 'general',\n          vertical: data.vertical || 'General',\n          message_direction: data.direction || 'inbound',\n          handoff_required: data.handoff_required ? 'yes' : 'no',\n          session_id: data.conversation_id || '',\n          engagement_time_msec: data.duration_ms || 0\n        }\n      }\n    ]\n  }\n}];"
+      }
+    },
+    {
+      "id": "send-to-ga4",
+      "name": "Send to Google Analytics 4",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [650, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.google-analytics.com/mp/collect?measurement_id={{measurement_id}}&api_secret={{api_secret}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "format-ga-event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-ga-event": {
+      "main": [
+        [
+          {
+            "node": "send-to-ga4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Africa/Johannesburg",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "executionTimeout": 15
+  }
+}

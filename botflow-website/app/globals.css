@@ -25,7 +25,6 @@
 }
 
 @keyframes bounce-slow {
-
     0%,
     100% {
         transform: translateY(0);
@@ -36,6 +35,34 @@
     }
 }
 
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slide-in {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
 .animate-bounce-slow {
     animation: bounce-slow 3s ease-in-out infinite;
+}
+
+.animate-fade-in {
+    animation: fade-in 0.3s ease-in-out;
+}
+
+.animate-slide-in {
+    animation: slide-in 0.3s ease-out;
 }
