@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { supabase } from '../config/supabase.js';
 import { BotTemplate, TemplateInstantiationData, TemplateInstantiationResult } from '../types/template.js';
 
@@ -5,7 +6,7 @@ export class TemplateInstantiationService {
   /**
    * Create a bot from a template
    */
-  static async instantiateBot(data: TemplateInstantiationData): Promise<TemplateInstantiationResult> {
+  static async instantiateBot(data: TemplateInstantiationData, userId: string): Promise<TemplateInstantiationResult> {
     try {
       // 1. Fetch the template
       const { data: template, error: templateError } = await supabase
@@ -25,9 +26,13 @@ export class TemplateInstantiationService {
       const botConfig = this.generateBotConfig(template, data.field_values);
 
       // 4. Create the bot in database
-      const { data: bot, error: botError } = await supabase
+      const botId = randomUUID();
+      const { data: bot, error: botError} = await supabase
         .from('bots')
         .insert({
+          id: botId,
+          user_id: userId,
+          template_id: data.template_id,
           organization_id: data.organization_id,
           whatsapp_account_id: data.whatsapp_account_id,
           name: data.bot_name,

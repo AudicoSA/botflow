@@ -363,7 +363,13 @@ export default async function botRoutes(fastify: FastifyInstance) {
                 field_values: Record<string, any>;
             };
 
-            const result = await TemplateInstantiationService.instantiateBot(data);
+            // Extract user ID from JWT token
+            const userId = (request.user as any)?.userId;
+            if (!userId) {
+                return reply.code(401).send({ error: 'Unauthorized: User ID not found in token' });
+            }
+
+            const result = await TemplateInstantiationService.instantiateBot(data, userId);
 
             return reply.code(201).send({
                 success: true,

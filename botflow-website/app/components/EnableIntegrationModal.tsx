@@ -73,7 +73,8 @@ export function EnableIntegrationModal({ integration, onClose, onSuccess }: Enab
       // Get token from localStorage
       const token = typeof window !== 'undefined' ? localStorage.getItem('botflow_token') : null;
 
-      const response = await fetch(`http://localhost:3001/api/marketplace/${integration.slug}/enable`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/marketplace/${integration.slug}/enable`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
