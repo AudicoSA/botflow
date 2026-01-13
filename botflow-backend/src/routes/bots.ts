@@ -40,7 +40,8 @@ export default async function botRoutes(fastify: FastifyInstance) {
     fastify.get('/', {
         // onRequest: [fastify.authenticate],
     }, async (request, reply) => {
-        let userId = (request.user as any)?.id;
+        // Match the field name used in create-from-template endpoint
+        let userId = (request.user as any)?.userId || (request.user as any)?.id;
 
         // Fallback to dev user if no auth (same as POST)
         if (!userId) {
@@ -204,7 +205,8 @@ export default async function botRoutes(fastify: FastifyInstance) {
     fastify.get('/:id', {
         // onRequest: [fastify.authenticate],
     }, async (request, reply) => {
-        let userId = (request.user as any)?.id;
+        // Match the field name used in create-from-template endpoint
+        let userId = (request.user as any)?.userId || (request.user as any)?.id;
 
         if (!userId) {
             try {
