@@ -16,6 +16,7 @@ import botRoutes from './routes/bots.js';
 import conversationRoutes from './routes/conversations.js';
 import webhookRoutes from './routes/webhooks.js';
 import templateRoutes from './routes/templates.js';
+import debugRoutes from './routes/debug.js';
 
 const fastify = Fastify({
     logger: logger,
@@ -114,6 +115,7 @@ import ralphRoutes from './routes/ralph.js';
 
 // Register routes
 await fastify.register(healthRoutes, { prefix: '/health' });
+await fastify.register(debugRoutes, { prefix: '/debug' }); // Debug endpoints
 await fastify.register(authRoutes, { prefix: '/api/auth' });
 await fastify.register(organizationRoutes, { prefix: '/api/organizations' });
 await fastify.register(whatsappRoutes, { prefix: '/api/whatsapp' });
