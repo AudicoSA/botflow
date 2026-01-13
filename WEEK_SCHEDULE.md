@@ -410,17 +410,101 @@ Testing, documentation, go-to-market
 
 ---
 
-#### Week 13: Launch Readiness
+#### Week 13: Freemium QR Code WhatsApp Connection
+**Focus:** Add "free starter" tier with personal WhatsApp connection via QR code
+**Why:** Lower barrier to entry, attract 10x more trial users, viral growth potential
+
+**Days 1-2: Backend QR Code Integration**
+- Install `whatsapp-web.js` + `puppeteer` libraries
+- Create `whatsapp-web-service.ts` (session management, QR generation, message handling)
+- Add QR code endpoint: `POST /api/whatsapp/connect-qr` (returns QR image + session ID)
+- Add session status endpoint: `GET /api/whatsapp/session/:id` (connected/disconnected)
+- Add disconnect endpoint: `DELETE /api/whatsapp/session/:id`
+- Handle incoming messages from personal WhatsApp (same flow as Business API)
+- Add `connection_type` field to `whatsapp_accounts` table (`'api' | 'qr'`)
+- Implement session persistence (survive server restarts)
+- Add reconnection logic (auto-reconnect on disconnect)
+
+**Days 3-4: Frontend QR Code UI**
+- Create QR code modal component (`ConnectWhatsAppQRModal.tsx`)
+- Add "Quick Start (Free)" button in integrations page
+- Display QR code with instructions: "Scan with your phone's WhatsApp"
+- Show connection status (Waiting → Connected → Active)
+- Add warning badge: "⚠️ Free tier - may disconnect, not for commercial use"
+- Add upgrade prompt: "Need reliability? Upgrade to Business API (R499/mo)"
+- Handle session expiry (show reconnect QR after 24-48 hours)
+- Add session management page (view all QR sessions, disconnect)
+
+**Days 5-6: Tier 0 Implementation**
+- Create new pricing tier in database: "Starter (Free)"
+- Tier 0 limits:
+  - Up to 100 messages/month (rate limiting)
+  - Single bot only
+  - Basic templates only (Taxi, Restaurant, Salon - 3 templates)
+  - No integrations access
+  - "Powered by BotFlow" watermark in responses
+  - QR connection only (no Business API)
+- Update frontend pricing page with Tier 0
+- Add usage tracking for free tier (messages sent/received)
+- Add upgrade flow (when limits hit, prompt to upgrade)
+- Implement soft limits (warning at 80%, block at 100%)
+
+**Day 7: Testing & Polish**
+- Test QR code flow end-to-end
+- Test session persistence (server restart)
+- Test reconnection after disconnect
+- Test message rate limiting
+- Test upgrade flow
+- Document QR vs Business API differences
+- Add FAQ: "Which connection method should I use?"
+- Update onboarding to show both options
+
+**Technical Complexity:**
+- **Easy parts** (60% of work):
+  - QR code generation (library handles it)
+  - Displaying QR code in modal
+  - Basic message handling
+  - Session storage
+- **Medium parts** (30% of work):
+  - Session persistence across restarts
+  - Reconnection logic
+  - Rate limiting per user
+  - Upgrade flow
+- **Hard parts** (10% of work):
+  - Handling disconnections gracefully
+  - Multiple concurrent QR sessions
+  - Memory management (WhatsApp Web uses Puppeteer/Chrome)
+  - Edge cases (phone turned off, WhatsApp uninstalled, etc.)
+
+**Caveats & Warnings:**
+- ⚠️ **Not officially supported by WhatsApp** - accounts CAN be banned
+- ⚠️ **Connection instability** - drops frequently (every 24-48 hours)
+- ⚠️ **Single device limitation** - phone can't use WhatsApp while bot is active
+- ⚠️ **High memory usage** - each session uses 100-200MB RAM (Puppeteer/Chrome)
+- ⚠️ **Scaling limits** - max 20-50 concurrent QR sessions per server
+- ⚠️ **No advanced features** - no message templates, no verified badge, no analytics
+- ⚠️ **Legal risk** - not suitable for commercial use at scale
+- ⚠️ **No SLA** - if disconnected, user must manually reconnect
+
+**Deliverable:** Tier 0 "Free Starter" plan with QR code connection working
+
+**Documentation:** `WEEK_13_GUIDE.md` | `QR_CODE_SETUP.md` | `FREE_VS_PAID_COMPARISON.md`
+
+---
+
+#### Week 14: Launch Readiness & Marketing
 **Focus:** Go-to-market preparation
-- Complete documentation
-- Marketing assets
-- Support team training
-- Monitoring setup
-- Launch announcement
+- Complete documentation (user guides, API docs, troubleshooting)
+- Marketing assets (landing page updates, demo videos, case studies)
+- Support team training (QR vs Business API differences)
+- Monitoring setup (Sentry, Uptime Robot, analytics)
+- Launch announcement (social media, email campaign, partnerships)
+- Beta user onboarding (10-20 free tier users, 5-10 paid tier users)
+- Press kit and media outreach
 
-**Deliverable:** Public launch
+**Deliverable:** Public launch with freemium tier
 
-**Documentation:** `WEEK_13_GUIDE.md` (create when starting)
+**Documentation:** `WEEK_14_GUIDE.md` (create when starting)
 
 ---
 
