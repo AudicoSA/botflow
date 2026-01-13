@@ -144,15 +144,27 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
 
             // --- SYNC TO WHATSAPP_ACCOUNTS (Bridge for Webhooks) ---
             if (type === 'whatsapp' && organizationId) {
-                // Determine Bird vs Meta
-                // For now assuming Bird if provider is set, otherwise default logic
+                // Determine provider type
                 const isBird = credentials.provider === 'bird';
+                const isTwilio = credentials.provider === 'twilio';
+                const isMeta = credentials.provider === 'meta' || (!isBird && !isTwilio);
+
+                // Get phone number based on provider
+                let phoneNumber = 'unknown';
+                if (isTwilio) {
+                    phoneNumber = credentials.phoneNumber || credentials.name || 'unknown';
+                } else if (isMeta) {
+                    phoneNumber = credentials.phoneNumberId || credentials.name || 'unknown';
+                } else if (isBird) {
+                    phoneNumber = credentials.channelId || credentials.name || 'unknown';
+                }
 
                 const waUpdate = {
                     organization_id: organizationId,
-                    phone_number: credentials.phoneNumberId || credentials.name || 'unknown', // Fallback
+                    phone_number: phoneNumber,
                     display_name: credentials.name,
                     status: 'active',
+                    provider: credentials.provider || 'meta', // Store provider type
                     // Meta fields
                     ...(credentials.phoneNumberId && { phone_number_id: credentials.phoneNumberId }),
                     ...(credentials.wabaId && { waba_id: credentials.wabaId }),
@@ -163,18 +175,41 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
                     })
                 };
 
-                // Check if account already exists for this number/channel
-                // We'll try to find by channel_id or phone_number
+                // Check if account already exists for this organization
+                // We'll try to find by organization_id first, then by provider-specific ID
+                const { data: existingAccounts } = await supabaseAdmin
+                    .from('whatsapp_accounts')
+                    .select('id')
+                    .eq('organization_id', organizationId);
+
                 let existingAccount = null;
-                if (isBird && credentials.channelId) {
-                    const { data } = await supabaseAdmin.from('whatsapp_accounts').select('id').eq('bird_channel_id', credentials.channelId).single();
-                    existingAccount = data;
+                if (existingAccounts && existingAccounts.length > 0) {
+                    // For now, just update the first account found for this org
+                    // In future, we could support multiple WhatsApp accounts per org
+                    existingAccount = existingAccounts[0];
                 }
 
                 if (existingAccount) {
-                    await supabaseAdmin.from('whatsapp_accounts').update(waUpdate).eq('id', existingAccount.id);
+                    const { error: updateError } = await supabaseAdmin
+                        .from('whatsapp_accounts')
+                        .update(waUpdate)
+                        .eq('id', existingAccount.id);
+
+                    if (updateError) {
+                        fastify.log.error(updateError, 'Failed to update whatsapp_accounts');
+                    } else {
+                        fastify.log.info({ id: existingAccount.id }, 'Updated WhatsApp account');
+                    }
                 } else {
-                    await supabaseAdmin.from('whatsapp_accounts').insert(waUpdate);
+                    const { error: insertError } = await supabaseAdmin
+                        .from('whatsapp_accounts')
+                        .insert(waUpdate);
+
+                    if (insertError) {
+                        fastify.log.error(insertError, 'Failed to insert whatsapp_accounts');
+                    } else {
+                        fastify.log.info('Created new WhatsApp account');
+                    }
                 }
             }
             // -------------------------------------------------------
