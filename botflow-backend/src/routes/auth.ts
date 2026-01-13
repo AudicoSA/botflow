@@ -96,8 +96,8 @@ export default async function authRoutes(fastify: FastifyInstance) {
             return { error: 'Invalid credentials' };
         }
 
-        // Get user's organization
-        const { data: memberData } = await supabase
+        // Get user's organization (use admin client to bypass RLS)
+        const { data: memberData } = await supabaseAdmin
             .from('organization_members')
             .select('organization_id, organizations(*)')
             .eq('user_id', authData.user.id)
@@ -106,7 +106,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         // Get organization's WhatsApp account (if exists)
         let whatsappAccount = null;
         if (memberData?.organization_id) {
-            const { data: waData, error: waError } = await supabase
+            const { data: waData, error: waError } = await supabaseAdmin
                 .from('whatsapp_accounts')
                 .select('*')
                 .eq('organization_id', memberData.organization_id)
