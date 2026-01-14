@@ -38,7 +38,7 @@ export default async function botRoutes(fastify: FastifyInstance) {
 
     // List bots
     fastify.get('/', {
-        // onRequest: [fastify.authenticate],
+        onRequest: [fastify.authenticate],
     }, async (request, reply) => {
         // Match the field name used in create-from-template endpoint
         let userId = (request.user as any)?.userId || (request.user as any)?.id;
