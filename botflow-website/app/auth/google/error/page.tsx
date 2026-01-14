@@ -1,8 +1,9 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function GoogleAuthError() {
+function GoogleAuthErrorContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const error = searchParams.get('error') || 'Authentication failed';
@@ -33,5 +34,22 @@ export default function GoogleAuthError() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function GoogleAuthError() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6">
+                <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                        <div className="w-8 h-8 border-4 border-gray-300 border-t-primary-blue rounded-full animate-spin"></div>
+                    </div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        }>
+            <GoogleAuthErrorContent />
+        </Suspense>
     );
 }
