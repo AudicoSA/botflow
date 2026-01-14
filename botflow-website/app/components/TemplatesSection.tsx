@@ -2,7 +2,7 @@
 'use client';
 
 import { templates } from '@/lib/templatesData';
-import TemplateCard from './TemplateCard';
+import LandingTemplateCard from './LandingTemplateCard';
 import { motion } from 'framer-motion';
 
 export default function TemplatesSection() {
@@ -32,7 +32,7 @@ export default function TemplatesSection() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {templates.map((template, index) => (
-                        <TemplateCard key={template.slug} template={template} index={index} />
+                        <LandingTemplateCard key={template.slug} template={template} index={index} />
                     ))}
                 </div>
             </div>
