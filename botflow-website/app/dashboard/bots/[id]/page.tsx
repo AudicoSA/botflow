@@ -33,7 +33,20 @@ export default function BotEditorPage() {
         const fetchBot = async () => {
             try {
                 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-                const response = await fetch(`${apiUrl}/api/bots/${botId}`);
+                const token = localStorage.getItem('botflow_token');
+
+                if (!token) {
+                    alert('Please login to continue');
+                    router.push('/login');
+                    return;
+                }
+
+                const response = await fetch(`${apiUrl}/api/bots/${botId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
                 if (response.ok) {
                     const data = await response.json();
                     setBot(data.bot);
@@ -51,12 +64,14 @@ export default function BotEditorPage() {
                         }
                     });
                 } else {
-                    alert('Failed to load bot details');
+                    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+                    alert(`Failed to load bot details: ${error.message || 'Unknown error'}`);
                     router.push('/dashboard/bots');
                 }
             } catch (error) {
                 console.error('Error fetching bot:', error);
                 alert('An error occurred loading the bot');
+                router.push('/dashboard/bots');
             } finally {
                 setLoading(false);
             }
@@ -79,6 +94,13 @@ export default function BotEditorPage() {
         setSaving(true);
         try {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+            const token = localStorage.getItem('botflow_token');
+
+            if (!token) {
+                alert('Please login to continue');
+                router.push('/login');
+                return;
+            }
 
             const payload = {
                 name: formData.name,
@@ -97,6 +119,7 @@ export default function BotEditorPage() {
             const response = await fetch(`${apiUrl}/api/bots/${botId}`, {
                 method: 'PATCH',
                 headers: {
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(payload),
