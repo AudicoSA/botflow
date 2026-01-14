@@ -71,8 +71,7 @@ export default async function botRoutes(fastify: FastifyInstance) {
 
     // Create bot
     fastify.post('/', {
-        // TODO: Re-enable auth after testing
-        // onRequest: [fastify.authenticate],
+        onRequest: [fastify.authenticate],
     }, async (request, reply) => {
         // Temporarily use a test user ID until auth is implemented
         let userId = (request.user as any)?.id;
@@ -203,7 +202,7 @@ export default async function botRoutes(fastify: FastifyInstance) {
 
     // Get bot
     fastify.get('/:id', {
-        // onRequest: [fastify.authenticate],
+        onRequest: [fastify.authenticate],
     }, async (request, reply) => {
         // Match the field name used in create-from-template endpoint
         let userId = (request.user as any)?.userId || (request.user as any)?.id;
@@ -253,7 +252,7 @@ export default async function botRoutes(fastify: FastifyInstance) {
 
     // Update bot
     fastify.patch('/:id', {
-        // onRequest: [fastify.authenticate],
+        onRequest: [fastify.authenticate],
     }, async (request, reply) => {
         let userId = (request.user as any)?.id;
 
@@ -295,7 +294,7 @@ export default async function botRoutes(fastify: FastifyInstance) {
 
     // Delete bot
     fastify.delete('/:id', {
-        // onRequest: [fastify.authenticate],
+        onRequest: [fastify.authenticate],
     }, async (request, reply) => {
         let userId = (request.user as any)?.id;
 
