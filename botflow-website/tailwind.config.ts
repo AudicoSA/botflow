@@ -16,7 +16,8 @@ export default {
                 surf: {
                     DEFAULT: '#00B4D8',
                     light: '#90E0EF',
-                    dark: '#0096C7',
+                    dark: '#0077B6', // Darkened slightly for better contrast
+                    darker: '#03045E',
                 },
                 sand: {
                     DEFAULT: '#FDF6E3',
@@ -36,6 +37,10 @@ export default {
                 background: 'hsl(var(--background))',
                 foreground: 'hsl(var(--foreground))',
             },
+            backgroundImage: {
+                'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                'hero-pattern': "url('/hero-pattern.svg')", // Placeholder if needed
+            }
         },
     },
     plugins: [],
