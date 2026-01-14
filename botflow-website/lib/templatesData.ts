@@ -17,7 +17,7 @@ export const templates: Template[] = [
     shortDescription: 'Boost sales and recover abandoned carts on WhatsApp.',
     fullDescription: 'The ultimate eCommerce companion. Seamlessly connects with your store to automate order updates, recover abandoned carts, and answer product queries instantly.',
     icon: 'ShoppingBag',
-    image: '/icons/ecommerce.png', 
+    image: '/icons/ecommerce.png',
     integrations: ['Shopify', 'WooCommerce', 'ShipLogic', 'n8n'],
     features: [
       'Abandoned Cart Recovery',
@@ -56,7 +56,7 @@ export const templates: Template[] = [
       'Follow-up Campaigns'
     ]
   },
-   {
+  {
     slug: 'appointment-booking',
     title: 'Appointment Booking',
     shortDescription: 'Streamline scheduling for clinics, salons, and consultants.',
@@ -99,6 +99,21 @@ export const templates: Template[] = [
       'Resume Upload Handling',
       'Interview Scheduling',
       'Application Status Updates'
+    ]
+  },
+  {
+    slug: 'shuttle-service',
+    title: 'Shuttle & Travel Booking',
+    shortDescription: 'Automate bookings, pickups, and driver notifications.',
+    fullDescription: 'Perfect for shuttle services, tour operators, and private drivers. Handle bookings, send location pins, and notify drivers automatically via WhatsApp.',
+    icon: 'Bus',
+    image: '/icons/shuttle.png',
+    integrations: ['Google Maps', 'Stripe', 'Twilio', 'n8n'],
+    features: [
+      'Visual Seat Booking',
+      'Location Sharing & Pickup Coordination',
+      'Driver Dispatch Notifications',
+      'Payment Links'
     ]
   }
 ];

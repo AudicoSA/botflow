@@ -1,9 +1,8 @@
-
 'use client';
 
 import { Template } from '@/lib/templatesData';
 import { motion } from 'framer-motion';
-import { ArrowRight, ShoppingBag, Headphones, Home, Calendar, Target, Users, Bot } from 'lucide-react';
+import { ArrowRight, ShoppingBag, Headphones, Home, Calendar, Target, Users, Bot, Bus } from 'lucide-react';
 import Link from 'next/link';
 
 interface LandingTemplateCardProps {
@@ -18,7 +17,8 @@ const icons: { [key: string]: any } = {
     Calendar,
     Target,
     Users,
-    Bot
+    Bot,
+    Bus
 };
 
 export default function LandingTemplateCard({ template, index }: LandingTemplateCardProps) {

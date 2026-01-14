@@ -4,6 +4,8 @@
 import { templates } from '@/lib/templatesData';
 import LandingTemplateCard from './LandingTemplateCard';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 
 export default function TemplatesSection() {
     return (
@@ -31,9 +33,19 @@ export default function TemplatesSection() {
                 </motion.div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {templates.map((template, index) => (
+                    {templates.slice(0, 6).map((template, index) => (
                         <LandingTemplateCard key={template.slug} template={template} index={index} />
                     ))}
+                </div>
+
+                <div className="mt-16 text-center">
+                    <Link
+                        href="/templates"
+                        className="inline-flex items-center px-8 py-4 bg-white border-2 border-surf text-surf-dark rounded-full font-bold text-lg hover:bg-surf hover:text-white hover:border-surf transition-all duration-300 shadow-sm hover:shadow-lg hover:-translate-y-1 group"
+                    >
+                        View All Application Templates
+                        <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </Link>
                 </div>
             </div>
         </section>
