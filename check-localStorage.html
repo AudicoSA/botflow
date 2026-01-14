@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check localStorage</title>
+</head>
+<body>
+    <h1>localStorage Debug</h1>
+    <pre id="output"></pre>
+
+    <script>
+        const data = {
+            token: localStorage.getItem('botflow_token') ? 'Present' : 'Missing',
+            organizationId: localStorage.getItem('botflow_organizationId'),
+            whatsappAccountId: localStorage.getItem('botflow_whatsappAccountId'),
+        };
+
+        // Decode token if present
+        if (localStorage.getItem('botflow_token')) {
+            try {
+                const token = localStorage.getItem('botflow_token');
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                data.tokenPayload = payload;
+            } catch (e) {
+                data.tokenPayload = 'Error decoding token';
+            }
+        }
+
+        document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+        console.log('localStorage data:', data);
+    </script>
+</body>
+</html>

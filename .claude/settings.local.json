@@ -32,7 +32,8 @@
       "Bash(powershell:*)",
       "Bash(npx tsx:*)",
       "Bash(timeout /t 8)",
-      "Bash(powershell.exe -ExecutionPolicy Bypass -File \"c:\\\\Users\\\\kenny\\\\OneDrive\\\\Whatsapp Service\\\\check-and-fix-bot.ps1\")"
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File \"c:\\\\Users\\\\kenny\\\\OneDrive\\\\Whatsapp Service\\\\check-and-fix-bot.ps1\")",
+      "Bash(powershell.exe:*)"
     ]
   }
 }
