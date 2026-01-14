@@ -261,19 +261,36 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
 
     // --- Google OAuth Routes ---
 
-    const getOAuth2Client = () => {
+    const getGoogleSheetsOAuth2Client = () => {
+        if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+            throw new Error('Google OAuth not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.');
+        }
+
+        // Use the configured redirect URI, or construct it from the backend URL
+        let redirectUri = env.GOOGLE_REDIRECT_URI;
+
+        if (!redirectUri) {
+            // Railway automatically provides PUBLIC_URL or RAILWAY_PUBLIC_DOMAIN
+            const backendUrl = process.env.PUBLIC_URL ||
+                              (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null) ||
+                              'https://botflow-production.up.railway.app'; // Hardcoded fallback
+
+            redirectUri = `${backendUrl}/api/integrations/google-sheets/callback`;
+            fastify.log.info({ redirectUri }, 'Using dynamically constructed redirect URI for Google Sheets');
+        }
+
         return new google.auth.OAuth2(
             env.GOOGLE_CLIENT_ID,
             env.GOOGLE_CLIENT_SECRET,
-            env.GOOGLE_REDIRECT_URI
+            redirectUri
         );
     };
 
-    // 1. Start OAuth Flow
-    fastify.get('/google/auth', async (request, reply) => {
+    // 1. Start Google Sheets OAuth Flow
+    fastify.get('/google-sheets/auth', async (request, reply) => {
         try {
             const { userId, state } = request.query as { userId?: string, state?: string };
-            const oauth2Client = getOAuth2Client();
+            const oauth2Client = getGoogleSheetsOAuth2Client();
 
             const scopes = [
                 'https://www.googleapis.com/auth/spreadsheets',
@@ -296,8 +313,8 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
         }
     });
 
-    // 2. OAuth Callback
-    fastify.get('/google/callback', async (request, reply) => {
+    // 2. Google Sheets OAuth Callback
+    fastify.get('/google-sheets/callback', async (request, reply) => {
         const { code, state } = request.query as { code: string, state?: string };
 
         if (!code) {
@@ -305,7 +322,7 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
         }
 
         try {
-            const oauth2Client = getOAuth2Client();
+            const oauth2Client = getGoogleSheetsOAuth2Client();
             const { tokens } = await oauth2Client.getToken(code);
             oauth2Client.setCredentials(tokens);
 
