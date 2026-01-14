@@ -24,7 +24,15 @@
       "Bash(npm install:*)",
       "Bash(timeout /t 5)",
       "Bash(powershell -Command:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(netstat:*)",
+      "Bash(powershell:*)",
+      "Bash(npx tsx:*)",
+      "Bash(timeout /t 8)",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File \"c:\\\\Users\\\\kenny\\\\OneDrive\\\\Whatsapp Service\\\\check-and-fix-bot.ps1\")"
     ]
   }
 }

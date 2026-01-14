@@ -1,0 +1,187 @@
+﻿[
+    {
+        "id":  "248320a2-8750-460a-9068-735fd27eadfc",
+        "name":  "Taxi \u0026 Shuttle Service",
+        "vertical":  "taxi",
+        "tier":  1,
+        "description":  "Automate ride bookings, quotes, and confirmations for your taxi or shuttle service.",
+        "tagline":  "Book rides in seconds",
+        "icon":  "🚕",
+        "required_fields":  {
+                                "base_rate":  {
+                                                  "type":  "number",
+                                                  "label":  "Base Rate (R)",
+                                                  "helpText":  "Starting price for rides",
+                                                  "required":  false,
+                                                  "placeholder":  "e.g. 50"
+                                              },
+                                "per_km_rate":  {
+                                                    "type":  "number",
+                                                    "label":  "Rate per Kilometer (R)",
+                                                    "required":  false,
+                                                    "placeholder":  "e.g. 12"
+                                                },
+                                "service_area":  {
+                                                     "type":  "text",
+                                                     "label":  "Service Area",
+                                                     "helpText":  "Describe where you operate",
+                                                     "required":  true,
+                                                     "placeholder":  "e.g. Cape Town CBD and surrounding areas"
+                                                 },
+                                "booking_phone":  {
+                                                      "type":  "text",
+                                                      "label":  "Booking Phone Number",
+                                                      "required":  true,
+                                                      "placeholder":  "e.g. 021 123 4567"
+                                                  },
+                                "business_name":  {
+                                                      "type":  "text",
+                                                      "label":  "Business Name",
+                                                      "required":  true,
+                                                      "placeholder":  "e.g. Cape Town Cabs"
+                                                  },
+                                "pricing_model":  {
+                                                      "type":  "select",
+                                                      "label":  "Pricing Model",
+                                                      "required":  true,
+                                                      "validation":  {
+                                                                         "options":  [
+                                                                                         "Per kilometer",
+                                                                                         "Fixed routes",
+                                                                                         "Hourly rate",
+                                                                                         "Custom quote"
+                                                                                     ]
+                                                                     }
+                                                  },
+                                "vehicle_types":  {
+                                                      "type":  "multiselect",
+                                                      "label":  "Vehicle Types",
+                                                      "required":  true,
+                                                      "validation":  {
+                                                                         "options":  [
+                                                                                         "Sedan (4 seater)",
+                                                                                         "SUV (6 seater)",
+                                                                                         "Mini-bus (14 seater)",
+                                                                                         "Luxury vehicle"
+                                                                                     ]
+                                                                     }
+                                                  },
+                                "operating_hours":  {
+                                                        "type":  "text",
+                                                        "label":  "Operating Hours",
+                                                        "required":  true,
+                                                        "placeholder":  "e.g. 24/7 or 6am-10pm"
+                                                    }
+                            },
+        "conversation_flow":  {
+                                  "rules":  [
+                                                "Always confirm pickup location, destination, and time before booking",
+                                                "Calculate and show estimated fare when possible",
+                                                "Ask for number of passengers to recommend appropriate vehicle",
+                                                "Mention if pickup is outside service area",
+                                                "Provide booking confirmation with details"
+                                            ],
+                                  "intents":  {
+                                                  "book_ride":  {
+                                                                    "response":  "Collect: pickup location, destination, date/time, passengers, vehicle preference",
+                                                                    "triggers":  [
+                                                                                     "book",
+                                                                                     "need a ride",
+                                                                                     "pickup",
+                                                                                     "drop off"
+                                                                                 ]
+                                                                },
+                                                  "get_quote":  {
+                                                                    "response":  "Ask for pickup and destination to calculate fare",
+                                                                    "triggers":  [
+                                                                                     "how much",
+                                                                                     "price",
+                                                                                     "cost",
+                                                                                     "quote"
+                                                                                 ]
+                                                                },
+                                                  "cancel_booking":  {
+                                                                         "response":  "Handoff to human for cancellations",
+                                                                         "triggers":  [
+                                                                                          "cancel",
+                                                                                          "change booking"
+                                                                                      ]
+                                                                     },
+                                                  "check_availability":  {
+                                                                             "response":  "Check if location is within service area",
+                                                                             "triggers":  [
+                                                                                              "available",
+                                                                                              "can you",
+                                                                                              "do you serve"
+                                                                                          ]
+                                                                         }
+                                              },
+                                  "systemPrompt":  "You are a helpful taxi booking assistant for {{business_name}}. You help customers:\n1. Book rides\n2. Get price quotes\n3. Confirm pickup locations and times\n4. Answer questions about service areas and vehicle types\n\nService Area: {{service_area}}\nVehicle Types: {{vehicle_types}}\nPricing: {{pricing_model}} - Base: R{{base_rate}}, Per km: R{{per_km_rate}}\nOperating Hours: {{operating_hours}}\nBooking Phone: {{booking_phone}}\n\nAlways be professional, friendly, and efficient. Collect: pickup location, destination, date/time, number of passengers, and preferred vehicle type before confirming.",
+                                  "welcomeMessage":  "Hi! 👋 Welcome to {{business_name}}. I can help you book a ride or get a price quote. Where would you like to go?",
+                                  "handoffConditions":  [
+                                                            "Customer is angry or frustrated",
+                                                            "Request is outside standard booking (special requirements)",
+                                                            "Technical issue with booking system",
+                                                            "Customer wants to cancel or modify existing booking"
+                                                        ],
+                                  "exampleConversations":  [
+                                                               {
+                                                                   "bot":  "Great! I can help you book that. Where should we pick you up from?",
+                                                                   "customer":  "I need a ride to the airport tomorrow at 6am"
+                                                               },
+                                                               {
+                                                                   "bot":  "Perfect! For tomorrow at 6am from 123 Main Street to Cape Town Airport:\n- Distance: ~22km\n- Estimated fare: R{{calculated_fare}}\n- Vehicle: Sedan (4 seater)\n\nShall I confirm this booking?",
+                                                                   "customer":  "From 123 Main Street, Cape Town"
+                                                               }
+                                                           ]
+                              },
+        "example_prompts":  [
+                                "I need a ride to the airport tomorrow morning",
+                                "How much is it from Camps Bay to the Waterfront?",
+                                "Do you have a 6-seater available tonight?",
+                                "What\u0027s your service area?"
+                            ],
+        "integrations":  [
+                             "maps",
+                             "calendar"
+                         ],
+        "is_published":  true,
+        "version":  1,
+        "created_by":  null,
+        "created_at":  "2026-01-11T06:22:14.730141+00:00",
+        "updated_at":  "2026-01-12T04:25:58.095666+00:00"
+    },
+    {
+        "id":  "96cc31df-9a48-4b96-a0a9-4151de36bf22",
+        "name":  "Test Taxi Template",
+        "vertical":  "taxi",
+        "tier":  1,
+        "description":  "Updated description for taxi bookings",
+        "tagline":  "Automate your taxi bookings",
+        "icon":  "🚕",
+        "required_fields":  {
+                                "business_name":  {
+                                                      "type":  "text",
+                                                      "label":  "Business Name",
+                                                      "required":  true
+                                                  }
+                            },
+        "conversation_flow":  {
+                                  "systemPrompt":  "You are a taxi booking assistant",
+                                  "welcomeMessage":  "Welcome!"
+                              },
+        "example_prompts":  [
+                                "I need a ride",
+                                "How much to the airport?"
+                            ],
+        "integrations":  [
+                             "maps",
+                             "calendar"
+                         ],
+        "is_published":  true,
+        "version":  1,
+        "created_by":  null,
+        "created_at":  "2026-01-11T05:39:13.912957+00:00",
+        "updated_at":  "2026-01-11T05:39:13.912957+00:00"
+    }
+]
