@@ -2,7 +2,11 @@
 
 import { Template } from '@/lib/templatesData';
 import { motion } from 'framer-motion';
-import { ArrowRight, ShoppingBag, Headphones, Home, Calendar, Target, Users, Bot, Bus } from 'lucide-react';
+import {
+    ArrowRight, ShoppingBag, Headphones, Home, Calendar, Target, Users, Bot, Bus,
+    Calculator, Wrench, Car, Sparkles, Stethoscope, Dumbbell, Building, Scale,
+    Utensils, Scissors, Plane, GraduationCap, Heart
+} from 'lucide-react';
 import Link from 'next/link';
 
 interface LandingTemplateCardProps {
@@ -18,7 +22,9 @@ const icons: { [key: string]: any } = {
     Target,
     Users,
     Bot,
-    Bus
+    Bus,
+    Calculator, Wrench, Car, Sparkles, Stethoscope, Dumbbell, Building, Scale,
+    Utensils, Scissors, Plane, GraduationCap, Heart
 };
 
 export default function LandingTemplateCard({ template, index }: LandingTemplateCardProps) {
