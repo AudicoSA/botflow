@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 
 export default function DashboardLayout({
@@ -11,7 +11,32 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     const pathname = usePathname();
+    const router = useRouter();
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [userEmail, setUserEmail] = useState('');
+
+    useEffect(() => {
+        // Get user email from localStorage
+        if (typeof window !== 'undefined') {
+            const token = localStorage.getItem('botflow_token');
+            if (token) {
+                try {
+                    // Decode JWT to get email
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    setUserEmail(payload.email || 'User');
+                } catch (e) {
+                    setUserEmail('User');
+                }
+            }
+        }
+    }, []);
+
+    const handleLogout = () => {
+        if (typeof window !== 'undefined') {
+            localStorage.clear();
+            router.push('/login');
+        }
+    };
 
     const navigation = [
         { name: 'Dashboard', href: '/dashboard', icon: '📊' },
@@ -75,17 +100,28 @@ export default function DashboardLayout({
 
                     {/* User menu */}
                     <div className="p-4 border-t border-gray-200">
-                        <div className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 cursor-pointer">
+                        <div className="flex items-center gap-3 px-4 py-3 rounded-lg">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-blue to-primary-cyan flex items-center justify-center text-white font-semibold">
-                                U
+                                {userEmail ? userEmail.charAt(0).toUpperCase() : 'U'}
                             </div>
                             {sidebarOpen && (
                                 <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-900">User</p>
+                                    <p className="text-sm font-medium text-gray-900">{userEmail || 'User'}</p>
                                     <p className="text-xs text-gray-500">Starter Plan</p>
                                 </div>
                             )}
                         </div>
+                        {sidebarOpen && (
+                            <button
+                                onClick={handleLogout}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-2"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                                Logout
+                            </button>
+                        )}
                     </div>
                 </div>
             </aside>
