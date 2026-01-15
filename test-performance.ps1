@@ -200,22 +200,22 @@ Write-Host ""
 
 # Target Comparison
 Write-Host "Target Comparison:" -ForegroundColor White
-Write-Host "  ✓ Target: Login < 1000ms" -ForegroundColor $(if ($loginTime -lt 1000) {"Green"} else {"Red"})
-Write-Host "  ✓ Target: Search < 500ms" -ForegroundColor $(if ($avgSearchTime -lt 500) {"Green"} else {"Red"})
-Write-Host "  ✓ Target: Stats < 500ms" -ForegroundColor $(if ($statsTime -lt 500) {"Green"} else {"Red"})
+Write-Host "  Target: Login less than 1000ms" -ForegroundColor $(if ($loginTime -lt 1000) {"Green"} else {"Red"})
+Write-Host "  Target: Search less than 500ms" -ForegroundColor $(if ($avgSearchTime -lt 500) {"Green"} else {"Red"})
+Write-Host "  Target: Stats less than 500ms" -ForegroundColor $(if ($statsTime -lt 500) {"Green"} else {"Red"})
 Write-Host ""
 
 # Overall Assessment
 $allTargetsMet = ($loginTime -lt 1000) -and ($avgSearchTime -lt 500) -and ($statsTime -lt 500)
 
 if ($allTargetsMet) {
-    Write-Host "✓ All performance targets met!" -ForegroundColor Green
+    Write-Host "[PASS] All performance targets met!" -ForegroundColor Green
     Write-Host "  System is ready for production load." -ForegroundColor White
 } else {
-    Write-Host "⚠ Some performance targets not met" -ForegroundColor Yellow
+    Write-Host "[WARN] Some performance targets not met" -ForegroundColor Yellow
     Write-Host "  Consider optimization before production." -ForegroundColor White
 }
 
 Write-Host ""
 Write-Host "Performance test complete!" -ForegroundColor Cyan
-Write-Host "Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Gray
+Write-Host "Date: 2025-01-15" -ForegroundColor Gray
