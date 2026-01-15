@@ -540,3 +540,111 @@ Key remaining work:
 - Visual bot builder with React Flow
 - Advanced analytics
 - Billing integration completion
+
+---
+
+## Phase 2: Intelligent Bot Factory (In Progress) 🏭
+
+**Goal:** Transform BotFlow from a template deployer into an intelligent, dynamic workflow factory that builds custom solutions automatically.
+
+### Phase 2 Overview
+- **Duration:** 6 Weeks (Started: Week 13)
+- **Core Tech:** n8n workflows, pgvector (PostgreSQL native), RAG, Dynamic workflow compilation
+- **Status**: Week 1 - Days 1-4 Complete! ✅
+
+### Phase 2 Architecture
+
+**RAG (Retrieval-Augmented Generation):**
+- **Vector Database**: pgvector (PostgreSQL native) - no external service needed
+- **Embeddings**: OpenAI text-embedding-3-small (1536 dimensions)
+- **Search**: Cosine similarity with IVFFLAT index
+- **Storage**: Supabase Storage for document files
+- **Processing**: n8n workflows for async PDF parsing and embedding generation
+
+**Database Schema (Phase 2):**
+- `knowledge_base_articles` - Document metadata and status tracking
+- `knowledge_embeddings` - Vector embeddings with pgvector (1536 dimensions)
+- `search_knowledge()` - PostgreSQL function for similarity search
+- `hybrid_search_knowledge()` - Combined vector + keyword search
+- `get_knowledge_stats()` - Analytics helper function
+
+**New API Routes:**
+- `GET /api/bots/:botId/knowledge` - List knowledge sources
+- `POST /api/bots/:botId/knowledge` - Initialize file upload
+- `POST /bots/:botId/knowledge/:articleId/process` - Trigger processing
+- `POST /bots/:botId/knowledge/:articleId/complete` - Processing webhook
+- `GET /bots/:botId/knowledge/stats` - Get statistics
+- `DELETE /bots/:botId/knowledge/:articleId` - Delete source
+
+---
+
+## Phase 2: The Intelligent Bot Factory 🏭
+
+### Overview
+Phase 2 transforms BotFlow from a template deployer into an intelligent, dynamic workflow factory. Users can build truly custom bots that connect to their specific tools (Shopify, ShipLogic, etc.) and use their own knowledge base for accurate responses.
+
+### Key Technologies
+- **pgvector**: PostgreSQL native vector search (no external vector DB needed!)
+- **OpenAI Embeddings**: text-embedding-3-small (1536 dimensions)
+- **n8n**: Workflow automation for async processing
+- **Supabase Storage**: File uploads with signed URLs
+- **HMAC Signatures**: Webhook security
+
+### Phase 2 Documentation
+- [PHASE2_SCHEDULE.md](./PHASE2_SCHEDULE.md) - 6-week roadmap with security and testing
+- [PHASE2_WEEK1_GUIDE.md](./PHASE2_WEEK1_GUIDE.md) - Detailed Week 1 implementation guide
+- [PHASE2_WEEK1_QUICKSTART.md](./PHASE2_WEEK1_QUICKSTART.md) - Quick setup guide
+- [PHASE2_PROGRESS.md](./PHASE2_PROGRESS.md) - Progress tracker and status
+
+## Phase 2: The Intelligent Bot Factory 🏭
+
+Phase 2 transforms BotFlow from a template deployer into an intelligent, dynamic workflow factory that builds custom solutions automatically.
+
+### Phase 2 Architecture
+
+**Core Technologies:**
+- **pgvector**: PostgreSQL native vector search (no external vector DB needed!)
+- **OpenAI Embeddings**: text-embedding-3-small (1536 dimensions)
+- **n8n**: Workflow automation for document processing
+- **RAG**: Retrieval-Augmented Generation for knowledge-based responses
+
+### Week 1: Knowledge Base & RAG (IN PROGRESS)
+
+**Status:** Day 1-4 Complete! ✅
+
+**What's Working:**
+- ✅ pgvector extension enabled in Supabase PostgreSQL
+- ✅ Database schema with `knowledge_base_articles` and `knowledge_embeddings` tables
+- ✅ Vector similarity search functions (`search_knowledge`, `hybrid_search_knowledge`)
+- ✅ Backend API routes for file upload and management
+- ✅ HMAC webhook security for n8n integration
+- ✅ Supabase Storage integration with signed URLs
+- ✅ Organization-based access control
+
+**Key Files:**
+- `botflow-backend/migrations/001_pgvector_knowledge_base.sql` - Database schema
+- `botflow-backend/src/routes/knowledge.ts` - API endpoints
+- `PHASE2_WEEK1_GUIDE.md` - Detailed implementation guide
+- `PHASE2_WEEK1_QUICKSTART.md` - Quick setup instructions
+- `PHASE2_PROGRESS.md` - Progress tracking
+
+**API Endpoints (Phase 2):**
+- `GET /api/bots/:botId/knowledge` - List knowledge sources
+- `POST /api/bots/:botId/knowledge` - Initialize file upload
+- `POST /api/bots/:botId/knowledge/:articleId/process` - Trigger processing
+- `POST /bots/:botId/knowledge/:articleId/complete` - n8n callback webhook
+- `GET /bots/:botId/knowledge/stats` - Get statistics
+- `DELETE /bots/:botId/knowledge/:articleId` - Delete source
+
+**Database Tables:**
+- `knowledge_base_articles` - Document metadata and status
+- `knowledge_embeddings` - Vector embeddings for semantic search (pgvector)
+
+**Key Functions:**
+- `search_knowledge()` - Vector similarity search
+- `hybrid_search_knowledge()` - Combined vector + keyword search
+- `get_knowledge_stats()` - Knowledge base statistics
+
+---
+
+

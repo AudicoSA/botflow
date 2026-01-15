@@ -36,6 +36,7 @@ const envSchema = z.object({
     N8N_API_URL: z.string().url().optional(),
     N8N_API_KEY: z.string().optional(),
     N8N_WEBHOOK_URL: z.string().url().optional(),
+    N8N_WEBHOOK_SECRET: z.string().min(32).optional(), // For HMAC signature verification
 
     // Stripe (deprecated for SA - use Paystack)
     STRIPE_SECRET_KEY: z.string().optional(),

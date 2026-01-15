@@ -7,6 +7,7 @@ import OpenAI from 'openai';
 import { env } from '../config/env.js';
 import { loadTemplateConfig } from '../services/template-config.service.js';
 import { buildMessagesArray, matchIntent, enhancePromptWithIntent, validateMessagesArray } from '../services/prompt-builder.service.js';
+import { searchKnowledge, buildKnowledgeContext } from '../services/knowledge-search.js';
 
 const openai = new OpenAI({
     apiKey: env.OPENAI_API_KEY,
@@ -81,7 +82,33 @@ const messageWorker = redis ? new Worker<MessageJob>(
                 created_at: msg.created_at
             })) || [];
 
-            // 5. Match customer intent (NEW - Week 3)
+            // 5. Search knowledge base (NEW - Phase 2 Week 1)
+            let knowledgeContext = '';
+            let knowledgeResults = [];
+
+            try {
+                knowledgeResults = await searchKnowledge({
+                    botId: bot.id,
+                    query: messageContent,
+                    limit: 3,
+                    threshold: 0.75
+                });
+
+                if (knowledgeResults.length > 0) {
+                    knowledgeContext = buildKnowledgeContext(knowledgeResults);
+                    logger.info({
+                        conversationId,
+                        botId: bot.id,
+                        resultsCount: knowledgeResults.length,
+                        topSimilarity: knowledgeResults[0]?.similarity
+                    }, 'Knowledge base results found');
+                }
+            } catch (knowledgeError) {
+                logger.warn({ error: knowledgeError, conversationId }, 'Knowledge search failed, continuing without RAG');
+                // Continue without knowledge base - graceful degradation
+            }
+
+            // 6. Match customer intent (NEW - Week 3)
             const matchedIntent = matchIntent(messageContent, templateConfig);
 
             if (matchedIntent) {
@@ -92,14 +119,14 @@ const messageWorker = redis ? new Worker<MessageJob>(
                 }, 'Intent matched for message');
             }
 
-            // 6. Build OpenAI messages array (NEW - Week 3)
+            // 7. Build OpenAI messages array (NEW - Week 3)
             const messagesArray = buildMessagesArray(
                 templateConfig,
                 conversationHistory,
                 messageContent
             );
 
-            // 7. Enhance with matched intent (NEW - Week 3)
+            // 8. Enhance with matched intent (NEW - Week 3)
             if (matchedIntent) {
                 messagesArray[0].content = enhancePromptWithIntent(
                     messagesArray[0].content,
@@ -107,17 +134,23 @@ const messageWorker = redis ? new Worker<MessageJob>(
                 );
             }
 
-            // 8. Validate messages array
+            // 9. Add knowledge context to system prompt (NEW - Phase 2 Week 1)
+            if (knowledgeContext) {
+                messagesArray[0].content += knowledgeContext;
+            }
+
+            // 10. Validate messages array
             if (!validateMessagesArray(messagesArray)) {
                 throw new Error('Invalid messages array structure');
             }
 
-            // 9. Call OpenAI
+            // 11. Call OpenAI
             logger.debug({
                 conversationId,
                 botId: bot.id,
                 messageCount: messagesArray.length,
-                intentMatched: !!matchedIntent
+                intentMatched: !!matchedIntent,
+                hasKnowledge: knowledgeResults.length > 0
             }, 'Calling OpenAI');
 
             const completion = await openai.chat.completions.create({
@@ -126,9 +159,14 @@ const messageWorker = redis ? new Worker<MessageJob>(
                 messages: messagesArray,
             });
 
-            const aiResponse = completion.choices[0]?.message?.content || 'Sorry, I could not process that.';
+            let aiResponse = completion.choices[0]?.message?.content || 'Sorry, I could not process that.';
 
-            // 10. Check handoff conditions (NEW - Week 3)
+            // 12. Add citation if knowledge was used (NEW - Phase 2 Week 1)
+            if (knowledgeResults.length > 0) {
+                aiResponse += '\n\n_💡 Based on uploaded documentation_';
+            }
+
+            // 13. Check handoff conditions (NEW - Week 3)
             const needsHandoff = checkHandoffConditions(
                 aiResponse,
                 messageContent,
@@ -142,7 +180,7 @@ const messageWorker = redis ? new Worker<MessageJob>(
                 }, 'Handoff condition detected');
             }
 
-            // 11. Save AI response to database
+            // 14. Save AI response to database
             const { data: responseMessage } = await supabaseAdmin
                 .from('messages')
                 .insert({
@@ -154,13 +192,15 @@ const messageWorker = redis ? new Worker<MessageJob>(
                     metadata: {
                         intent: matchedIntent?.name,
                         needs_handoff: needsHandoff,
-                        processing_time_ms: Date.now() - startTime
+                        processing_time_ms: Date.now() - startTime,
+                        knowledge_used: knowledgeResults.length > 0,
+                        knowledge_results_count: knowledgeResults.length
                     }
                 })
                 .select()
                 .single();
 
-            // 12. Send via Bird WhatsApp
+            // 15. Send via Bird WhatsApp
             const { data: whatsappAccount } = await supabaseAdmin
                 .from('whatsapp_accounts')
                 .select('*')
@@ -181,12 +221,12 @@ const messageWorker = redis ? new Worker<MessageJob>(
                     .eq('id', responseMessage.id);
             }
 
-            // 13. Handle handoff if needed (NEW - Week 3)
+            // 16. Handle handoff if needed (NEW - Week 3)
             if (needsHandoff) {
                 await notifyHumanAgent(conversationId, customerPhone, conversation);
             }
 
-            // 14. Update conversation context
+            // 17. Update conversation context
             await supabaseAdmin
                 .from('conversation_context')
                 .upsert({
@@ -197,7 +237,8 @@ const messageWorker = redis ? new Worker<MessageJob>(
                         last_response: aiResponse,
                         message_count: (context?.context_data?.message_count || 0) + 1,
                         last_intent: matchedIntent?.name,
-                        handoff_requested: needsHandoff
+                        handoff_requested: needsHandoff,
+                        knowledge_used: knowledgeResults.length > 0
                     },
                 });
 
@@ -207,7 +248,8 @@ const messageWorker = redis ? new Worker<MessageJob>(
                 botId: bot.id,
                 processingTime,
                 intent: matchedIntent?.name,
-                needsHandoff
+                needsHandoff,
+                knowledgeUsed: knowledgeResults.length > 0
             }, 'Message processed successfully');
 
             return {
@@ -215,7 +257,8 @@ const messageWorker = redis ? new Worker<MessageJob>(
                 botResponse: aiResponse,
                 intent: matchedIntent?.name,
                 needsHandoff,
-                processingTime
+                processingTime,
+                knowledgeUsed: knowledgeResults.length > 0
             };
 
         } catch (error) {
@@ -353,6 +396,29 @@ async function processGenericAI(
     try {
         logger.info({ botId: bot.id, task_type: bot.task_type }, 'Processing with generic AI');
 
+        // Search knowledge base (NEW - Phase 2 Week 1)
+        let knowledgeContext = '';
+        let knowledgeResults = [];
+
+        try {
+            knowledgeResults = await searchKnowledge({
+                botId: bot.id,
+                query: messageContent,
+                limit: 3,
+                threshold: 0.75
+            });
+
+            if (knowledgeResults.length > 0) {
+                knowledgeContext = buildKnowledgeContext(knowledgeResults);
+                logger.info({
+                    botId: bot.id,
+                    resultsCount: knowledgeResults.length
+                }, 'Knowledge base results found for generic AI');
+            }
+        } catch (knowledgeError) {
+            logger.warn({ error: knowledgeError, botId: bot.id }, 'Knowledge search failed in generic AI');
+        }
+
         // Build conversation history
         const { data: messages } = await supabaseAdmin
             .from('messages')
@@ -390,6 +456,11 @@ Ask for their order number and provide status updates.`;
                 systemPrompt = `You are a helpful customer service assistant. Help customers with their inquiries.`;
         }
 
+        // Add knowledge context if available
+        if (knowledgeContext) {
+            systemPrompt += knowledgeContext;
+        }
+
         // Call OpenAI
         const completion = await openai.chat.completions.create({
             model: bot.ai_model || 'gpt-4o',
@@ -401,7 +472,12 @@ Ask for their order number and provide status updates.`;
             ],
         });
 
-        const aiResponse = completion.choices[0]?.message?.content || 'Sorry, I could not process that.';
+        let aiResponse = completion.choices[0]?.message?.content || 'Sorry, I could not process that.';
+
+        // Add citation if knowledge was used
+        if (knowledgeResults.length > 0) {
+            aiResponse += '\n\n_💡 Based on uploaded documentation_';
+        }
 
         // Save AI response to database
         const { data: responseMessage } = await supabaseAdmin
@@ -413,7 +489,9 @@ Ask for their order number and provide status updates.`;
                 content: aiResponse,
                 sent_by: 'bot',
                 metadata: {
-                    processing_type: 'generic_ai'
+                    processing_type: 'generic_ai',
+                    knowledge_used: knowledgeResults.length > 0,
+                    knowledge_results_count: knowledgeResults.length
                 }
             })
             .select()
