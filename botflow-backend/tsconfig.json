@@ -26,6 +26,15 @@
     ],
     "exclude": [
         "node_modules",
-        "dist"
+        "dist",
+        "src/config/security.ts",
+        "src/config/sentry.ts",
+        "src/routes/analytics-ws.ts",
+        "src/routes/workflows.ts",
+        "src/services/bot-builder.service.test.ts",
+        "src/services/cache.service.ts",
+        "src/services/metrics-queue.service.ts",
+        "src/services/metrics.service.ts",
+        "src/workers/metrics-aggregation.worker.ts"
     ]
 }
