@@ -4,6 +4,10 @@
     "description": "BotFlow WhatsApp AI Platform - Backend API",
     "main": "src/server.ts",
     "type": "module",
+    "engines": {
+        "node": ">=20.0.0",
+        "npm": ">=10.0.0"
+    },
     "scripts": {
         "dev": "tsx watch src/server.ts",
         "build": "tsc",
