@@ -1,0 +1,98 @@
+{
+  "bot_id": "EXAMPLE_BOT_ID",
+  "version": "1.0.0",
+  "name": "RAG Knowledge Base Bot",
+  "description": "Bot that uses knowledge base search (Week 1!) to answer questions with context",
+  "nodes": [
+    {
+      "id": "1",
+      "type": "whatsapp_trigger",
+      "name": "Listen for Questions",
+      "config": {}
+    },
+    {
+      "id": "2",
+      "type": "knowledge_search",
+      "name": "Search Knowledge Base",
+      "config": {
+        "query": "{{message}}",
+        "limit": 3,
+        "similarity_threshold": 0.7
+      }
+    },
+    {
+      "id": "3",
+      "type": "if_condition",
+      "name": "Check if Results Found",
+      "config": {
+        "left_value": "{{results.length}}",
+        "operator": "greater_than",
+        "right_value": "0"
+      }
+    },
+    {
+      "id": "4",
+      "type": "openai_chat",
+      "name": "Generate Answer with Context",
+      "config": {
+        "system_prompt": "You are a helpful assistant. Use the following context to answer the user's question:\n\n{{context}}\n\nIf the context doesn't contain relevant information, say so politely.",
+        "user_message": "{{message}}",
+        "model": "gpt-4o",
+        "temperature": 0.7
+      }
+    },
+    {
+      "id": "5",
+      "type": "whatsapp_reply",
+      "name": "Send Answer",
+      "config": {
+        "message": "{{response}}",
+        "recipient": "{{customer_phone}}"
+      }
+    },
+    {
+      "id": "6",
+      "type": "whatsapp_reply",
+      "name": "No Results Found",
+      "config": {
+        "message": "I couldn't find information about that in our knowledge base. Please contact support for help! 📞",
+        "recipient": "{{customer_phone}}"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "1",
+      "target": "2"
+    },
+    {
+      "id": "e2",
+      "source": "2",
+      "target": "3"
+    },
+    {
+      "id": "e3",
+      "source": "3",
+      "target": "4",
+      "sourceHandle": "true",
+      "label": "Results found"
+    },
+    {
+      "id": "e4",
+      "source": "4",
+      "target": "5"
+    },
+    {
+      "id": "e5",
+      "source": "3",
+      "target": "6",
+      "sourceHandle": "false",
+      "label": "No results"
+    }
+  ],
+  "variables": {
+    "business_name": "Support Bot"
+  },
+  "credentials": []
+}

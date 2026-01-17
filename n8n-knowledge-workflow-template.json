@@ -1,0 +1,267 @@
+{
+  "name": "BotFlow Knowledge Ingestion Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "knowledge-ingest",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "knowledge-ingest"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Verify HMAC signature for security\nconst crypto = require('crypto');\n\nconst receivedSignature = $input.first().headers['x-webhook-signature'];\nconst webhookSecret = $env.N8N_WEBHOOK_SECRET;\nconst payload = JSON.stringify($input.first().json.body);\n\nif (!webhookSecret) {\n  throw new Error('N8N_WEBHOOK_SECRET not configured');\n}\n\nconst expectedSignature = crypto\n  .createHmac('sha256', webhookSecret)\n  .update(payload)\n  .digest('hex');\n\nif (receivedSignature !== expectedSignature) {\n  throw new Error('Invalid webhook signature - unauthorized request');\n}\n\nconsole.log('✅ HMAC signature verified');\n\n// Pass through the payload\nreturn $input.all();"
+      },
+      "name": "Verify HMAC Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.storage_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "name": "Download PDF from Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [650, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase_auth",
+          "name": "Supabase Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract text from PDF\nconst pdfParse = require('pdf-parse');\n\n// Get binary data from previous node\nconst binaryData = await this.helpers.getBinaryDataBuffer(0);\n\ntry {\n  console.log('📄 Parsing PDF...');\n  const pdfData = await pdfParse(binaryData);\n  \n  console.log(`✅ Extracted ${pdfData.numpages} pages, ${pdfData.text.length} characters`);\n  \n  return [{\n    json: {\n      text: pdfData.text,\n      num_pages: pdfData.numpages,\n      info: pdfData.info,\n      article_id: $node['Webhook'].json.body.article_id,\n      bot_id: $node['Webhook'].json.body.bot_id,\n      storage_path: $node['Webhook'].json.body.storage_path\n    }\n  }];\n} catch (error) {\n  console.error('❌ PDF parsing failed:', error);\n  throw new Error(`PDF parse error: ${error.message}`);\n}"
+      },
+      "name": "Extract Text from PDF",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Chunk text into manageable pieces\nconst text = $json.text;\nconst article_id = $json.article_id;\nconst bot_id = $json.bot_id;\n\n// Configuration\nconst chunkCharSize = 2000; // ~500 tokens\nconst overlapCharSize = 200; // ~50 token overlap\n\nconst chunks = [];\nlet startIndex = 0;\nlet chunkIndex = 0;\n\nconsole.log(`📝 Chunking ${text.length} characters...`);\n\nwhile (startIndex < text.length) {\n  const endIndex = Math.min(startIndex + chunkCharSize, text.length);\n  const content = text.substring(startIndex, endIndex).trim();\n  \n  if (content.length > 0) {\n    chunks.push({\n      content: content,\n      chunk_index: chunkIndex,\n      char_start: startIndex,\n      char_end: endIndex,\n      article_id: article_id,\n      bot_id: bot_id\n    });\n    chunkIndex++;\n  }\n  \n  startIndex += (chunkCharSize - overlapCharSize);\n}\n\nconsole.log(`✅ Created ${chunks.length} chunks`);\n\nreturn chunks.map(chunk => ({ json: chunk }));"
+      },
+      "name": "Chunk Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "embedding_text",
+              "name": "embedding_text",
+              "value": "={{ $json.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Prepare for Embedding",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "model": "text-embedding-3-small",
+        "text": "={{ $json.embedding_text }}",
+        "options": {}
+      },
+      "name": "Generate Embedding",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [1450, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai_api",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Format data for database insert\nconst embedding = $json.embedding; // Array from OpenAI\nconst content = $json.content;\nconst chunk_index = $json.chunk_index;\nconst bot_id = $json.bot_id;\nconst article_id = $json.article_id;\n\n// Format embedding as PostgreSQL vector literal\nconst embeddingStr = '[' + embedding.join(',') + ']';\n\nreturn [{\n  json: {\n    bot_id: bot_id,\n    source_id: article_id,\n    content: content,\n    embedding: embeddingStr,\n    chunk_index: chunk_index,\n    metadata: JSON.stringify({\n      chunk_index: chunk_index,\n      created_at: new Date().toISOString(),\n      char_count: content.length\n    })\n  }\n}];"
+      },
+      "name": "Format for Database",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO knowledge_embeddings (bot_id, source_id, content, embedding, chunk_index, metadata)\nVALUES (\n  '{{ $json.bot_id }}',\n  '{{ $json.source_id }}',\n  '{{ $json.content }}',\n  '{{ $json.embedding }}'::vector(1536),\n  {{ $json.chunk_index }},\n  '{{ $json.metadata }}'::jsonb\n)",
+        "options": {}
+      },
+      "name": "Insert Embedding to Database",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1850, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE knowledge_base_articles\nSET metadata = metadata || jsonb_build_object(\n  'status', 'indexed',\n  'total_chunks', (SELECT COUNT(*) FROM knowledge_embeddings WHERE source_id = '{{ $node['Webhook'].json.body.article_id }}'),\n  'processed_at', NOW()\n)\nWHERE id = '{{ $node['Webhook'].json.body.article_id }}'",
+        "options": {}
+      },
+      "name": "Update Article Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2050, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $node['Webhook'].json.body.callback_url }}",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "indexed"
+            },
+            {
+              "name": "total_chunks",
+              "value": "={{ $json.total_chunks }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Send Completion Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2250, 300]
+    },
+    {
+      "parameters": {
+        "errorWorkflow": "={{ $workflow.id }}",
+        "options": {}
+      },
+      "name": "On Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [650, 500]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE knowledge_base_articles\nSET metadata = metadata || jsonb_build_object(\n  'status', 'failed',\n  'error_message', '{{ $json.error.message }}',\n  'failed_at', NOW()\n)\nWHERE id = '{{ $node['Webhook'].json.body.article_id }}'",
+        "options": {}
+      },
+      "name": "Mark as Failed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [850, 500],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $node['Webhook'].json.body.callback_url }}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "failed"
+            },
+            {
+              "name": "error_message",
+              "value": "={{ $json.error.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Send Error Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1050, 500]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Verify HMAC Signature", "type": "main", "index": 0}]]
+    },
+    "Verify HMAC Signature": {
+      "main": [[{"node": "Download PDF from Supabase", "type": "main", "index": 0}]]
+    },
+    "Download PDF from Supabase": {
+      "main": [[{"node": "Extract Text from PDF", "type": "main", "index": 0}]]
+    },
+    "Extract Text from PDF": {
+      "main": [[{"node": "Chunk Text", "type": "main", "index": 0}]]
+    },
+    "Chunk Text": {
+      "main": [[{"node": "Prepare for Embedding", "type": "main", "index": 0}]]
+    },
+    "Prepare for Embedding": {
+      "main": [[{"node": "Generate Embedding", "type": "main", "index": 0}]]
+    },
+    "Generate Embedding": {
+      "main": [[{"node": "Format for Database", "type": "main", "index": 0}]]
+    },
+    "Format for Database": {
+      "main": [[{"node": "Insert Embedding to Database", "type": "main", "index": 0}]]
+    },
+    "Insert Embedding to Database": {
+      "main": [[{"node": "Update Article Status", "type": "main", "index": 0}]]
+    },
+    "Update Article Status": {
+      "main": [[{"node": "Send Completion Callback", "type": "main", "index": 0}]]
+    },
+    "On Error": {
+      "main": [[{"node": "Mark as Failed", "type": "main", "index": 0}]]
+    },
+    "Mark as Failed": {
+      "main": [[{"node": "Send Error Callback", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionTimeout": 600,
+    "saveExecutionProgress": "all"
+  },
+  "versionId": "1",
+  "meta": {
+    "instanceId": "botflowsa"
+  },
+  "tags": ["botflow", "knowledge", "rag", "embeddings"]
+}

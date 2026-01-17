@@ -36,7 +36,14 @@
       "Bash(powershell.exe:*)",
       "Bash(.test-knowledge-workflow.ps1)",
       "Bash(pwsh:*)",
-      "Bash(bash:*)"
+      "Bash(bash:*)",
+      "Bash(timeout:*)",
+      "Bash(npx tsc:*)",
+      "Bash(Select-Object -Last 10)",
+      "Bash(b9207b9)",
+      "Bash(b059aa1 \")",
+      "Bash(npx n8n-mcp --version)",
+      "Bash(npm search:*)"
     ],
     "additionalDirectories": [
       "\\tmp"

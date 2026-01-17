@@ -1,0 +1,1070 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2026-01-16",
+  "description": "BotFlow Node Library - Reusable workflow building blocks",
+  "nodes": {
+    "whatsapp_trigger": {
+      "id": "whatsapp_trigger",
+      "type": "whatsapp_trigger",
+      "category": "trigger",
+      "name": "WhatsApp Trigger",
+      "description": "Listens for incoming WhatsApp messages",
+      "icon": "📱",
+      "inputs": [
+        {
+          "name": "keyword",
+          "type": "string",
+          "label": "Keyword (optional)",
+          "description": "Only trigger on messages containing this keyword",
+          "required": false
+        },
+        {
+          "name": "webhook_path",
+          "type": "string",
+          "label": "Webhook Path",
+          "description": "Custom webhook path (auto-generated if not provided)",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "message",
+          "type": "object",
+          "description": "The incoming WhatsApp message"
+        },
+        {
+          "name": "customer_phone",
+          "type": "string",
+          "description": "Customer's phone number"
+        },
+        {
+          "name": "conversation_id",
+          "type": "string",
+          "description": "Conversation ID"
+        }
+      ],
+      "n8n_type": "n8n-nodes-base.webhook",
+      "n8n_template": {
+        "typeVersion": 1,
+        "parameters": {
+          "path": "={{$node[\"config\"].webhook_path || 'whatsapp-' + $workflow.id}}",
+          "httpMethod": "POST",
+          "responseMode": "onReceived",
+          "options": {}
+        }
+      }
+    },
+
+    "whatsapp_reply": {
+      "id": "whatsapp_reply",
+      "type": "whatsapp_reply",
+      "category": "action",
+      "name": "WhatsApp Reply",
+      "description": "Sends a message back to the customer",
+      "icon": "💬",
+      "inputs": [
+        {
+          "name": "message",
+          "type": "string",
+          "label": "Message",
+          "description": "The message to send (supports {{variables}})",
+          "required": true,
+          "validation": [
+            {
+              "type": "min",
+              "value": 1,
+              "message": "Message cannot be empty"
+            },
+            {
+              "type": "max",
+              "value": 4096,
+              "message": "Message cannot exceed 4096 characters"
+            }
+          ]
+        },
+        {
+          "name": "recipient",
+          "type": "string",
+          "label": "Recipient",
+          "description": "Phone number or variable (e.g., {{customer_phone}})",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "name": "sent",
+          "type": "boolean",
+          "description": "Whether message was sent successfully"
+        },
+        {
+          "name": "message_id",
+          "type": "string",
+          "description": "WhatsApp message ID"
+        }
+      ],
+      "n8n_type": "n8n-nodes-base.httpRequest",
+      "n8n_template": {
+        "typeVersion": 4.1,
+        "parameters": {
+          "method": "POST",
+          "url": "={{$env.BIRD_API_URL}}/workspaces/{{$env.BIRD_WORKSPACE_ID}}/messages",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "httpHeaderAuth",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\"to\": \"{{$node[\"config\"].recipient}}\", \"from\": \"{{$env.WHATSAPP_PHONE_NUMBER}}\", \"type\": \"text\", \"text\": {\"body\": \"{{$node[\"config\"].message}}\"}}",
+          "options": {}
+        }
+      }
+    },
+
+    "ask_question": {
+      "id": "ask_question",
+      "type": "ask_question",
+      "category": "action",
+      "name": "Ask Question",
+      "description": "Prompts the user for input and waits for response",
+      "icon": "❓",
+      "inputs": [
+        {
+          "name": "question",
+          "type": "string",
+          "label": "Question",
+          "description": "The question to ask the user",
+          "required": true,
+          "validation": [
+            {
+              "type": "min",
+              "value": 1,
+              "message": "Question cannot be empty"
+            }
+          ]
+        },
+        {
+          "name": "variable_name",
+          "type": "string",
+          "label": "Save Response As",
+          "description": "Variable name to store the response (e.g., 'user_name')",
+          "required": true,
+          "validation": [
+            {
+              "type": "pattern",
+              "value": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+              "message": "Variable name must be alphanumeric and start with a letter"
+            }
+          ]
+        },
+        {
+          "name": "timeout",
+          "type": "number",
+          "label": "Timeout (seconds)",
+          "description": "How long to wait for a response",
+          "required": false,
+          "default_value": 300,
+          "validation": [
+            {
+              "type": "min",
+              "value": 10,
+              "message": "Timeout must be at least 10 seconds"
+            },
+            {
+              "type": "max",
+              "value": 3600,
+              "message": "Timeout cannot exceed 1 hour"
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "response",
+          "type": "string",
+          "description": "The user's response"
+        },
+        {
+          "name": "timed_out",
+          "type": "boolean",
+          "description": "Whether the request timed out"
+        }
+      ],
+      "n8n_type": "n8n-nodes-base.wait",
+      "n8n_template": {
+        "typeVersion": 1.1,
+        "parameters": {
+          "resume": "webhook",
+          "options": {
+            "timeout": "={{$node[\"config\"].timeout || 300}}"
+          }
+        }
+      }
+    },
+
+    "if_condition": {
+      "id": "if_condition",
+      "type": "if_condition",
+      "category": "condition",
+      "name": "If/Then Condition",
+      "description": "Branches the workflow based on a condition",
+      "icon": "🔀",
+      "inputs": [
+        {
+          "name": "left_value",
+          "type": "string",
+          "label": "Left Value",
+          "description": "First value to compare (supports {{variables}})",
+          "required": true
+        },
+        {
+          "name": "operator",
+          "type": "select",
+          "label": "Operator",
+          "description": "Comparison operator",
+          "required": true,
+          "options": [
+            "equals",
+            "not_equals",
+            "contains",
+            "not_contains",
+            "starts_with",
+            "ends_with",
+            "greater_than",
+            "less_than",
+            "is_empty",
+            "is_not_empty"
+          ],
+          "default_value": "equals"
+        },
+        {
+          "name": "right_value",
+          "type": "string",
+          "label": "Right Value",
+          "description": "Second value to compare (not needed for is_empty/is_not_empty)",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "true",
+          "type": "any",
+          "description": "Executes if condition is true"
+        },
+        {
+          "name": "false",
+          "type": "any",
+          "description": "Executes if condition is false"
+        }
+      ],
+      "n8n_type": "n8n-nodes-base.if",
+      "n8n_template": {
+        "typeVersion": 2,
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "1",
+                "leftValue": "={{$node[\"config\"].left_value}}",
+                "rightValue": "={{$node[\"config\"].right_value}}",
+                "operator": {
+                  "type": "string",
+                  "operation": "={{$node[\"config\"].operator}}"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      }
+    },
+
+    "store_variable": {
+      "id": "store_variable",
+      "type": "store_variable",
+      "category": "utility",
+      "name": "Store Variable",
+      "description": "Saves data to conversation context for later use",
+      "icon": "💾",
+      "inputs": [
+        {
+          "name": "variable_name",
+          "type": "string",
+          "label": "Variable Name",
+          "description": "Name of the variable to store",
+          "required": true,
+          "validation": [
+            {
+              "type": "pattern",
+              "value": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+              "message": "Variable name must be alphanumeric and start with a letter"
+            }
+          ]
+        },
+        {
+          "name": "value",
+          "type": "string",
+          "label": "Value",
+          "description": "Value to store (supports {{variables}})",
+          "required": true
+        },
+        {
+          "name": "scope",
+          "type": "select",
+          "label": "Scope",
+          "description": "Where to store the variable",
+          "required": true,
+          "options": [
+            "conversation",
+            "session",
+            "global"
+          ],
+          "default_value": "conversation"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "success",
+          "type": "boolean",
+          "description": "Whether the variable was stored successfully"
+        }
+      ],
+      "n8n_type": "n8n-nodes-base.set",
+      "n8n_template": {
+        "typeVersion": 3.2,
+        "parameters": {
+          "mode": "manual",
+          "duplicateItem": false,
+          "assignments": {
+            "assignments": [
+              {
+                "id": "1",
+                "name": "={{$node[\"config\"].variable_name}}",
+                "value": "={{$node[\"config\"].value}}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        }
+      }
+    },
+
+    "text_manipulation": {
+      "id": "text_manipulation",
+      "type": "text_manipulation",
+      "category": "utility",
+      "name": "Text Manipulation",
+      "description": "Transform text (concat, replace, format, uppercase, lowercase)",
+      "icon": "✏️",
+      "inputs": [
+        {
+          "name": "operation",
+          "type": "select",
+          "label": "Operation",
+          "description": "Text transformation to perform",
+          "required": true,
+          "options": [
+            "concat",
+            "replace",
+            "uppercase",
+            "lowercase",
+            "trim",
+            "substring"
+          ]
+        },
+        {
+          "name": "input_text",
+          "type": "string",
+          "label": "Input Text",
+          "description": "Text to transform (supports {{variables}})",
+          "required": true
+        },
+        {
+          "name": "params",
+          "type": "json",
+          "label": "Parameters",
+          "description": "Operation-specific parameters",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "result",
+          "type": "string",
+          "description": "Transformed text"
+        }
+      ],
+      "n8n_type": "n8n-nodes-base.code",
+      "n8n_template": {
+        "typeVersion": 2,
+        "parameters": {
+          "language": "javaScript",
+          "jsCode": "// Text manipulation logic will be generated based on operation"
+        }
+      }
+    },
+
+    "http_request": {
+      "id": "http_request",
+      "type": "http_request",
+      "category": "utility",
+      "name": "HTTP Request",
+      "description": "Make a generic API call to any endpoint",
+      "icon": "🌐",
+      "inputs": [
+        {
+          "name": "method",
+          "type": "select",
+          "label": "HTTP Method",
+          "description": "Request method",
+          "required": true,
+          "options": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+          "default_value": "GET"
+        },
+        {
+          "name": "url",
+          "type": "string",
+          "label": "URL",
+          "description": "API endpoint (supports {{variables}})",
+          "required": true
+        },
+        {
+          "name": "headers",
+          "type": "json",
+          "label": "Headers",
+          "description": "Request headers as JSON object",
+          "required": false
+        },
+        {
+          "name": "body",
+          "type": "json",
+          "label": "Request Body",
+          "description": "Request body for POST/PUT/PATCH",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "response",
+          "type": "object",
+          "description": "API response"
+        },
+        {
+          "name": "status_code",
+          "type": "number",
+          "description": "HTTP status code"
+        }
+      ],
+      "n8n_type": "n8n-nodes-base.httpRequest",
+      "n8n_template": {
+        "typeVersion": 4.1,
+        "parameters": {
+          "method": "={{$node[\"config\"].method}}",
+          "url": "={{$node[\"config\"].url}}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": []
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": []
+          },
+          "options": {}
+        }
+      }
+    },
+
+    "database_query": {
+      "id": "database_query",
+      "type": "database_query",
+      "category": "utility",
+      "name": "Database Query",
+      "description": "Query PostgreSQL database (read-only recommended)",
+      "icon": "🗄️",
+      "inputs": [
+        {
+          "name": "query",
+          "type": "string",
+          "label": "SQL Query",
+          "description": "SQL query to execute (supports {{variables}})",
+          "required": true
+        },
+        {
+          "name": "parameters",
+          "type": "json",
+          "label": "Query Parameters",
+          "description": "Parameterized values for SQL injection prevention",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "rows",
+          "type": "array",
+          "description": "Query results"
+        },
+        {
+          "name": "row_count",
+          "type": "number",
+          "description": "Number of rows returned"
+        }
+      ],
+      "n8n_type": "n8n-nodes-base.postgres",
+      "n8n_template": {
+        "typeVersion": 2.3,
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "={{$node[\"config\"].query}}",
+          "options": {}
+        },
+        "credentials": {
+          "postgres": {
+            "id": "supabase_db",
+            "name": "Supabase Database"
+          }
+        }
+      }
+    },
+
+    "shopify_lookup": {
+      "id": "shopify_lookup",
+      "type": "shopify_lookup",
+      "category": "integration",
+      "name": "Shopify Product Lookup",
+      "description": "Get product information from Shopify",
+      "icon": "🛍️",
+      "inputs": [
+        {
+          "name": "product_id",
+          "type": "string",
+          "label": "Product ID",
+          "description": "Shopify product ID or SKU (supports {{variables}})",
+          "required": true
+        },
+        {
+          "name": "fields",
+          "type": "multiselect",
+          "label": "Fields to Retrieve",
+          "description": "Product fields to return",
+          "required": false,
+          "options": [
+            "title",
+            "price",
+            "inventory",
+            "description",
+            "images",
+            "variants"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "product",
+          "type": "object",
+          "description": "Product details"
+        },
+        {
+          "name": "in_stock",
+          "type": "boolean",
+          "description": "Whether product is in stock"
+        }
+      ],
+      "n8n_type": "n8n-nodes-base.shopify",
+      "n8n_template": {
+        "typeVersion": 1,
+        "parameters": {
+          "resource": "product",
+          "operation": "get",
+          "productId": "={{$node[\"config\"].product_id}}"
+        },
+        "credentials": {
+          "shopifyApi": {
+            "id": "{{credentials.shopify}}",
+            "name": "Shopify API"
+          }
+        }
+      }
+    },
+
+    "paystack_payment": {
+      "id": "paystack_payment",
+      "type": "paystack_payment",
+      "category": "integration",
+      "name": "Paystack Payment Link",
+      "description": "Generate a Paystack payment link",
+      "icon": "💳",
+      "inputs": [
+        {
+          "name": "amount",
+          "type": "number",
+          "label": "Amount (ZAR cents)",
+          "description": "Amount in cents (e.g., 10000 = R100)",
+          "required": true,
+          "validation": [
+            {
+              "type": "min",
+              "value": 100,
+              "message": "Amount must be at least R1 (100 cents)"
+            }
+          ]
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "label": "Customer Email",
+          "description": "Customer's email address (supports {{variables}})",
+          "required": true
+        },
+        {
+          "name": "reference",
+          "type": "string",
+          "label": "Reference",
+          "description": "Unique payment reference",
+          "required": false
+        },
+        {
+          "name": "callback_url",
+          "type": "string",
+          "label": "Callback URL",
+          "description": "URL to redirect after payment",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "payment_link",
+          "type": "string",
+          "description": "Payment URL to send to customer"
+        },
+        {
+          "name": "reference",
+          "type": "string",
+          "description": "Payment reference for tracking"
+        }
+      ],
+      "n8n_type": "n8n-nodes-base.httpRequest",
+      "n8n_template": {
+        "typeVersion": 4.1,
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.paystack.co/transaction/initialize",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "paystackApi",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\"amount\": {{$node[\"config\"].amount}}, \"email\": \"{{$node[\"config\"].email}}\", \"reference\": \"{{$node[\"config\"].reference}}\" }",
+          "options": {}
+        }
+      }
+    },
+
+    "knowledge_search": {
+      "id": "knowledge_search",
+      "type": "knowledge_search",
+      "category": "integration",
+      "name": "Knowledge Base Search",
+      "description": "Search bot's knowledge base using RAG (Week 1!)",
+      "icon": "📚",
+      "inputs": [
+        {
+          "name": "query",
+          "type": "string",
+          "label": "Search Query",
+          "description": "Question or keywords to search (supports {{variables}})",
+          "required": true
+        },
+        {
+          "name": "limit",
+          "type": "number",
+          "label": "Max Results",
+          "description": "Maximum number of results to return",
+          "required": false,
+          "default_value": 3,
+          "validation": [
+            {
+              "type": "min",
+              "value": 1
+            },
+            {
+              "type": "max",
+              "value": 10
+            }
+          ]
+        },
+        {
+          "name": "similarity_threshold",
+          "type": "number",
+          "label": "Similarity Threshold",
+          "description": "Minimum similarity score (0.0 - 1.0)",
+          "required": false,
+          "default_value": 0.7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "results",
+          "type": "array",
+          "description": "Matching knowledge base articles"
+        },
+        {
+          "name": "context",
+          "type": "string",
+          "description": "Combined context text for AI"
+        }
+      ],
+      "n8n_type": "n8n-nodes-base.postgres",
+      "n8n_template": {
+        "typeVersion": 2.3,
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT * FROM search_knowledge($1, $2, $3, $4)",
+          "options": {}
+        }
+      }
+    },
+
+    "openai_chat": {
+      "id": "openai_chat",
+      "type": "openai_chat",
+      "category": "integration",
+      "name": "OpenAI Chat",
+      "description": "Custom GPT call with system prompt",
+      "icon": "🤖",
+      "inputs": [
+        {
+          "name": "system_prompt",
+          "type": "string",
+          "label": "System Prompt",
+          "description": "AI instructions and context",
+          "required": true
+        },
+        {
+          "name": "user_message",
+          "type": "string",
+          "label": "User Message",
+          "description": "Message to send to AI (supports {{variables}})",
+          "required": true
+        },
+        {
+          "name": "model",
+          "type": "select",
+          "label": "Model",
+          "description": "OpenAI model to use",
+          "required": false,
+          "options": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"],
+          "default_value": "gpt-4o"
+        },
+        {
+          "name": "temperature",
+          "type": "number",
+          "label": "Temperature",
+          "description": "Response creativity (0.0 - 2.0)",
+          "required": false,
+          "default_value": 0.7,
+          "validation": [
+            {"type": "min", "value": 0},
+            {"type": "max", "value": 2}
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "response",
+          "type": "string",
+          "description": "AI-generated response"
+        },
+        {
+          "name": "tokens_used",
+          "type": "number",
+          "description": "Total tokens consumed"
+        }
+      ],
+      "n8n_type": "n8n-nodes-base.openAi",
+      "n8n_template": {
+        "typeVersion": 1.3,
+        "parameters": {
+          "resource": "chat",
+          "operation": "message",
+          "model": "={{$node[\"config\"].model}}",
+          "messages": {
+            "values": [
+              {
+                "role": "system",
+                "content": "={{$node[\"config\"].system_prompt}}"
+              },
+              {
+                "role": "user",
+                "content": "={{$node[\"config\"].user_message}}"
+              }
+            ]
+          },
+          "options": {
+            "temperature": "={{$node[\"config\"].temperature}}"
+          }
+        }
+      }
+    },
+
+    "delay": {
+      "id": "delay",
+      "type": "delay",
+      "category": "utility",
+      "name": "Delay",
+      "description": "Wait for a specified amount of time",
+      "icon": "⏱️",
+      "inputs": [
+        {
+          "name": "duration",
+          "type": "number",
+          "label": "Duration (seconds)",
+          "description": "How long to wait",
+          "required": true,
+          "default_value": 5,
+          "validation": [
+            {"type": "min", "value": 1},
+            {"type": "max", "value": 300}
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "completed",
+          "type": "boolean",
+          "description": "Always true after delay"
+        }
+      ],
+      "n8n_type": "n8n-nodes-base.wait",
+      "n8n_template": {
+        "typeVersion": 1.1,
+        "parameters": {
+          "resume": "after",
+          "amount": "={{$node[\"config\"].duration}}",
+          "unit": "seconds"
+        }
+      }
+    },
+
+    "switch_case": {
+      "id": "switch_case",
+      "type": "switch_case",
+      "category": "condition",
+      "name": "Switch/Case",
+      "description": "Route to different paths based on value",
+      "icon": "🔀",
+      "inputs": [
+        {
+          "name": "input_value",
+          "type": "string",
+          "label": "Input Value",
+          "description": "Value to match against cases (supports {{variables}})",
+          "required": true
+        },
+        {
+          "name": "cases",
+          "type": "json",
+          "label": "Cases",
+          "description": "Array of {value, output} objects",
+          "required": true
+        },
+        {
+          "name": "default_output",
+          "type": "string",
+          "label": "Default Output",
+          "description": "Output name if no case matches",
+          "required": false,
+          "default_value": "default"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "dynamic",
+          "type": "any",
+          "description": "Output determined by matched case"
+        }
+      ],
+      "n8n_type": "n8n-nodes-base.switch",
+      "n8n_template": {
+        "typeVersion": 3,
+        "parameters": {
+          "mode": "expression",
+          "output": "={{$node[\"config\"].input_value}}",
+          "rules": {
+            "rules": []
+          },
+          "options": {}
+        }
+      }
+    },
+
+    "loop": {
+      "id": "loop",
+      "type": "loop",
+      "category": "utility",
+      "name": "Loop",
+      "description": "Iterate over a list of items",
+      "icon": "🔁",
+      "inputs": [
+        {
+          "name": "items",
+          "type": "json",
+          "label": "Items",
+          "description": "Array to loop over (supports {{variables}})",
+          "required": true
+        },
+        {
+          "name": "batch_size",
+          "type": "number",
+          "label": "Batch Size",
+          "description": "Process items in batches",
+          "required": false,
+          "default_value": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "item",
+          "type": "any",
+          "description": "Current item in loop"
+        },
+        {
+          "name": "index",
+          "type": "number",
+          "description": "Current index (0-based)"
+        },
+        {
+          "name": "done",
+          "type": "boolean",
+          "description": "True when loop completes"
+        }
+      ],
+      "n8n_type": "n8n-nodes-base.splitInBatches",
+      "n8n_template": {
+        "typeVersion": 3,
+        "parameters": {
+          "batchSize": "={{$node[\"config\"].batch_size}}",
+          "options": {}
+        }
+      }
+    },
+
+    "error_handler": {
+      "id": "error_handler",
+      "type": "error_handler",
+      "category": "utility",
+      "name": "Error Handler",
+      "description": "Catch and handle errors gracefully",
+      "icon": "⚠️",
+      "inputs": [
+        {
+          "name": "error_message",
+          "type": "string",
+          "label": "Custom Error Message",
+          "description": "Message to show on error (supports {{variables}})",
+          "required": false
+        },
+        {
+          "name": "continue_on_error",
+          "type": "boolean",
+          "label": "Continue on Error",
+          "description": "Whether to continue workflow execution",
+          "required": false,
+          "default_value": true
+        },
+        {
+          "name": "log_error",
+          "type": "boolean",
+          "label": "Log Error",
+          "description": "Save error to database logs",
+          "required": false,
+          "default_value": true
+        }
+      ],
+      "outputs": [
+        {
+          "name": "success",
+          "type": "any",
+          "description": "Executes if no error"
+        },
+        {
+          "name": "error",
+          "type": "any",
+          "description": "Executes if error caught"
+        }
+      ],
+      "n8n_type": "n8n-nodes-base.errorTrigger",
+      "n8n_template": {
+        "typeVersion": 1,
+        "parameters": {}
+      }
+    },
+
+    "webhook_callback": {
+      "id": "webhook_callback",
+      "type": "webhook_callback",
+      "category": "integration",
+      "name": "Webhook Callback",
+      "description": "Notify external service via webhook",
+      "icon": "📡",
+      "inputs": [
+        {
+          "name": "url",
+          "type": "string",
+          "label": "Webhook URL",
+          "description": "External endpoint to notify (supports {{variables}})",
+          "required": true
+        },
+        {
+          "name": "method",
+          "type": "select",
+          "label": "HTTP Method",
+          "description": "Request method",
+          "required": false,
+          "options": ["POST", "PUT"],
+          "default_value": "POST"
+        },
+        {
+          "name": "payload",
+          "type": "json",
+          "label": "Payload",
+          "description": "Data to send in webhook",
+          "required": true
+        },
+        {
+          "name": "headers",
+          "type": "json",
+          "label": "Custom Headers",
+          "description": "Additional headers (e.g., authentication)",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "success",
+          "type": "boolean",
+          "description": "Whether webhook was delivered"
+        },
+        {
+          "name": "response",
+          "type": "object",
+          "description": "Response from webhook endpoint"
+        }
+      ],
+      "n8n_type": "n8n-nodes-base.httpRequest",
+      "n8n_template": {
+        "typeVersion": 4.1,
+        "parameters": {
+          "method": "={{$node[\"config\"].method}}",
+          "url": "={{$node[\"config\"].url}}",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{JSON.stringify($node[\"config\"].payload)}}",
+          "options": {}
+        }
+      }
+    }
+  }
+}

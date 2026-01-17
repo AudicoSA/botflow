@@ -1,0 +1,413 @@
+{
+  "name": "Knowledge Ingestion Pipeline (No Env Variables)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "knowledge-ingestion",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "knowledge-ingestion"
+    },
+    {
+      "parameters": {
+        "jsCode": "// HMAC Verification\nconst receivedSignature = $input.item.json.headers[\"x-webhook-signature\"];\nconst payload = $input.item.json.body;\n\nif (!receivedSignature) {\n  throw new Error('Missing webhook signature');\n}\n\nconst payloadString = JSON.stringify(payload);\nconst crypto = require('crypto');\n\n// CONFIGURE THIS: Your webhook secret (same as backend .env)\nconst secret = '244c564393ffbe3c4d0e08727d007d9bfc7c6505ac7bf5b03e265edef29edc18';\n\nconst expectedSignature = crypto.createHmac('sha256', secret)\n  .update(payloadString)\n  .digest('hex');\n\nif (receivedSignature !== expectedSignature) {\n  throw new Error('Invalid webhook signature - unauthorized request');\n}\n\n// Return the payload if valid\nreturn payload;"
+      },
+      "id": "hmac-verify",
+      "name": "HMAC Verify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.file_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "download-file",
+      "name": "Download PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse PDF using pdf-parse\nconst pdf = require('pdf-parse');\n\n// Get binary data from previous node\nconst binaryData = await this.helpers.getBinaryDataBuffer(0);\n\ntry {\n  // Parse PDF\n  const data = await pdf(binaryData);\n  \n  return {\n    json: {\n      text: data.text,\n      pages: data.numpages,\n      article_id: $input.item.json.article_id,\n      bot_id: $input.item.json.bot_id,\n      metadata: $input.item.json.metadata\n    }\n  };\n} catch (error) {\n  throw new Error(`PDF parsing failed: ${error.message}`);\n}"
+      },
+      "id": "parse-pdf",
+      "name": "Parse PDF",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Chunk text into overlapping segments\nfunction chunkText(text, chunkSize = 2000, overlap = 200) {\n  const chunks = [];\n  let start = 0;\n\n  while (start < text.length) {\n    let end = Math.min(start + chunkSize, text.length);\n\n    // Don't cut mid-sentence - find last period or newline\n    if (end < text.length) {\n      const lastPeriod = text.lastIndexOf('.', end);\n      const lastNewline = text.lastIndexOf('\\n', end);\n      const breakPoint = Math.max(lastPeriod, lastNewline);\n      \n      if (breakPoint > start + overlap) {\n        end = breakPoint + 1;\n      }\n    }\n\n    const chunk = text.slice(start, end).trim();\n    if (chunk.length > 50) {\n      chunks.push({\n        content: chunk,\n        chunk_index: chunks.length,\n        char_start: start,\n        char_end: end\n      });\n    }\n\n    start = end - overlap;\n  }\n\n  return chunks;\n}\n\n// Get text from previous node\nconst text = $input.item.json.text;\nconst chunks = chunkText(text);\n\n// Return array of chunks with metadata\nreturn chunks.map((chunk) => ({\n  json: {\n    ...chunk,\n    article_id: $input.item.json.article_id,\n    bot_id: $input.item.json.bot_id,\n    file_name: $input.item.json.metadata.file_name,\n    total_chunks: chunks.length,\n    total_pages: $input.item.json.pages\n  }\n}));"
+      },
+      "id": "chunk-text",
+      "name": "Chunk Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {}
+      },
+      "id": "loop-chunks",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": \"{{ $json.content }}\"\n}",
+        "options": {}
+      },
+      "id": "generate-embedding",
+      "name": "Generate Embedding (OpenAI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1450, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "CONFIGURE_IN_N8N",
+          "name": "OpenAI API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract embedding and prepare for database insert\nconst embedding = $input.item.json.data[0].embedding;\n\nreturn {\n  json: {\n    bot_id: $input.item.json.bot_id,\n    article_id: $input.item.json.article_id,\n    content: $input.item.json.content,\n    embedding: embedding,\n    chunk_index: $input.item.json.chunk_index,\n    file_name: $input.item.json.file_name,\n    char_start: $input.item.json.char_start,\n    char_end: $input.item.json.char_end,\n    total_chunks: $input.item.json.total_chunks\n  }\n};"
+      },
+      "id": "format-embedding",
+      "name": "Format Embedding",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ajtnixmnfuqtrgrakxss.supabase.co/rest/v1/knowledge_embeddings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_SUPABASE_SERVICE_ROLE_KEY_HERE"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_SUPABASE_SERVICE_ROLE_KEY_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"bot_id\": \"{{ $json.bot_id }}\",\n  \"source_id\": \"{{ $json.article_id }}\",\n  \"content\": \"{{ $json.content }}\",\n  \"embedding\": {{ JSON.stringify($json.embedding) }},\n  \"metadata\": {\n    \"chunk_index\": {{ $json.chunk_index }},\n    \"file_name\": \"{{ $json.file_name }}\",\n    \"char_start\": {{ $json.char_start }},\n    \"char_end\": {{ $json.char_end }}\n  }\n}",
+        "options": {}
+      },
+      "id": "insert-embedding",
+      "name": "Insert Embedding to Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "loop-back",
+      "name": "Loop Back",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2050, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all chunks and prepare final status\nconst allItems = $input.all();\nconst firstItem = allItems[0].json;\n\nreturn {\n  json: {\n    article_id: firstItem.article_id,\n    bot_id: firstItem.bot_id,\n    total_chunks: firstItem.total_chunks,\n    status: 'indexed',\n    processed_at: new Date().toISOString()\n  }\n};"
+      },
+      "id": "aggregate-results",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2250, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://ajtnixmnfuqtrgrakxss.supabase.co/rest/v1/knowledge_base_articles?id=eq.{{ $json.article_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_SUPABASE_SERVICE_ROLE_KEY_HERE"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_SUPABASE_SERVICE_ROLE_KEY_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"metadata\": {\n    \"status\": \"indexed\",\n    \"total_chunks\": {{ $json.total_chunks }},\n    \"processed_at\": \"{{ $json.processed_at }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "update-status",
+      "name": "Update Status to Indexed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate HMAC signature for callback\nconst crypto = require('crypto');\n\n// CONFIGURE THIS: Same secret as backend .env\nconst secret = '244c564393ffbe3c4d0e08727d007d9bfc7c6505ac7bf5b03e265edef29edc18';\n\nconst payload = {\n  article_id: $input.item.json.article_id,\n  status: $input.item.json.status,\n  total_chunks: $input.item.json.total_chunks,\n  processed_at: $input.item.json.processed_at\n};\n\nconst payloadString = JSON.stringify(payload);\nconst signature = crypto.createHmac('sha256', secret)\n  .update(payloadString)\n  .digest('hex');\n\nreturn {\n  json: {\n    ...payload,\n    signature: signature\n  }\n};"
+      },
+      "id": "generate-callback-signature",
+      "name": "Generate Callback Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:3002/api/bots/{{ $json.bot_id }}/knowledge/{{ $json.article_id }}/complete",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-webhook-signature",
+              "value": "={{ $json.signature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"article_id\": \"{{ $json.article_id }}\",\n  \"status\": \"{{ $json.status }}\",\n  \"total_chunks\": {{ $json.total_chunks }},\n  \"processed_at\": \"{{ $json.processed_at }}\"\n}",
+        "options": {}
+      },
+      "id": "callback-backend",
+      "name": "Callback to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2850, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "HMAC Verify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HMAC Verify": {
+      "main": [
+        [
+          {
+            "node": "Download PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download PDF": {
+      "main": [
+        [
+          {
+            "node": "Parse PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse PDF": {
+      "main": [
+        [
+          {
+            "node": "Chunk Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chunk Text": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Generate Embedding (OpenAI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Embedding (OpenAI)": {
+      "main": [
+        [
+          {
+            "node": "Format Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Embedding": {
+      "main": [
+        [
+          {
+            "node": "Insert Embedding to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Embedding to Supabase": {
+      "main": [
+        [
+          {
+            "node": "Loop Back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Back": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "Update Status to Indexed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status to Indexed": {
+      "main": [
+        [
+          {
+            "node": "Generate Callback Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Callback Signature": {
+      "main": [
+        [
+          {
+            "node": "Callback to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-01-15T00:00:00.000Z",
+  "versionId": "1"
+}

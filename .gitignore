@@ -41,3 +41,7 @@ botflow-backend/.env
 
 # artifacts
 .gemini
+
+# VS Code workspace settings (contains API keys)
+.vscode/settings.json
+nul

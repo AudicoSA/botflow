@@ -1,0 +1,36 @@
+{
+  "bot_id": "EXAMPLE_BOT_ID",
+  "version": "1.0.0",
+  "name": "Simple Greeting Bot",
+  "description": "A basic bot that responds to 'hello' with a greeting",
+  "nodes": [
+    {
+      "id": "1",
+      "type": "whatsapp_trigger",
+      "name": "Listen for Messages",
+      "config": {
+        "keyword": "hello"
+      }
+    },
+    {
+      "id": "2",
+      "type": "whatsapp_reply",
+      "name": "Send Greeting",
+      "config": {
+        "message": "Hello! 👋 How can I help you today?",
+        "recipient": "{{customer_phone}}"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "1",
+      "target": "2"
+    }
+  ],
+  "variables": {
+    "business_name": "Acme Inc"
+  },
+  "credentials": []
+}

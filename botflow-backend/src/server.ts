@@ -55,6 +55,8 @@ await fastify.register(cors, {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Length', 'X-Request-Id'],
 });
 
 await fastify.register(jwt, {
@@ -106,12 +108,16 @@ fastify.setErrorHandler((error, request, reply) => {
 
 import knowledgeRoutes from './routes/knowledge.js';
 import integrationRoutes from './routes/integrations.js';
+import integrationsTestRoutes from './routes/integrations-test.js';
 import { propertiesRoutes } from './routes/properties.js';
 import { schedulerService } from './services/scheduler.service.js';
 import calendarRoutes from './routes/calendar.js';
 import paymentRoutes from './routes/payments.js';
 import marketplaceRoutes from './routes/marketplace.js';
 import ralphRoutes from './routes/ralph.js';
+import botBuilderRoutes from './routes/bot-builder.js';
+import analyticsRoutes from './routes/analytics.js';
+import analyticsWsRoutes from './routes/analytics-ws.js';
 
 // Register routes
 await fastify.register(healthRoutes, { prefix: '/health' });
@@ -120,9 +126,11 @@ await fastify.register(authRoutes, { prefix: '/api/auth' });
 await fastify.register(organizationRoutes, { prefix: '/api/organizations' });
 await fastify.register(whatsappRoutes, { prefix: '/api/whatsapp' });
 await fastify.register(botRoutes, { prefix: '/api/bots' });
+await fastify.register(botBuilderRoutes, { prefix: '/api/bots' }); // Bot builder endpoints
 await fastify.register(templateRoutes, { prefix: '/api/templates' });
 await fastify.register(knowledgeRoutes, { prefix: '/api' }); // prefixes: /api/bots/:id/knowledge
 await fastify.register(integrationRoutes, { prefix: '/api/integrations' });
+await fastify.register(integrationsTestRoutes, { prefix: '/api/integrations' }); // Test integration credentials
 await fastify.register(calendarRoutes, { prefix: '/api/calendar' });
 await fastify.register(paymentRoutes, { prefix: '/api/payments' });
 await fastify.register(marketplaceRoutes, { prefix: '/api/marketplace' });
@@ -130,6 +138,8 @@ await fastify.register(propertiesRoutes, { prefix: '/api' });
 await fastify.register(conversationRoutes, { prefix: '/api/conversations' });
 await fastify.register(webhookRoutes, { prefix: '/webhooks' });
 await fastify.register(ralphRoutes, { prefix: '/api/ralph' });
+await fastify.register(analyticsRoutes, { prefix: '/api/analytics' });
+await fastify.register(analyticsWsRoutes, { prefix: '/api/analytics' }); // WebSocket routes
 
 // Start server
 const start = async () => {

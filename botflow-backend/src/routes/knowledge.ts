@@ -290,66 +290,22 @@ export default async function knowledgeRoutes(fastify: FastifyInstance) {
                 })
                 .eq('id', articleId);
 
-            // Trigger n8n ingestion workflow (if configured)
-            if (env.N8N_WEBHOOK_URL && env.N8N_WEBHOOK_SECRET) {
-                const payload = {
-                    file_url: urlData.signedUrl,
-                    bot_id: botId,
-                    source_id: articleId,
-                    file_name: article.metadata.file_name,
-                    file_type: article.metadata.file_type,
-                    timestamp: new Date().toISOString()
-                };
+            // Process PDF directly in backend (no n8n needed!)
+            fastify.log.info({ articleId, botId }, 'Starting PDF processing in backend');
 
-                const signature = generateWebhookSignature(payload);
+            // Import and instantiate PDF processor
+            const { PDFProcessorService } = await import('../services/pdf-processor.service.js');
+            const processor = new PDFProcessorService();
 
-                try {
-                    const webhookResponse = await fetch(`${env.N8N_WEBHOOK_URL}/webhook/knowledge-ingestion`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Webhook-Signature': signature
-                        },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!webhookResponse.ok) {
-                        throw new Error(`Webhook returned ${webhookResponse.status}`);
-                    }
-
-                    fastify.log.info({ articleId, botId }, 'Knowledge ingestion webhook triggered');
-                } catch (webhookError) {
-                    fastify.log.error(webhookError, 'Failed to trigger n8n webhook');
-
-                    // Update status to failed
-                    await supabaseAdmin
-                        .from('knowledge_base_articles')
-                        .update({
-                            metadata: {
-                                ...article.metadata,
-                                status: 'failed',
-                                error_message: 'Failed to trigger processing workflow'
-                            }
-                        })
-                        .eq('id', articleId);
-
-                    return reply.code(500).send({ error: 'Failed to trigger processing' });
-                }
-            } else {
-                fastify.log.warn('N8N_WEBHOOK_URL or N8N_WEBHOOK_SECRET not configured - skipping processing');
-
-                // Update status to indicate manual processing needed
-                await supabaseAdmin
-                    .from('knowledge_base_articles')
-                    .update({
-                        metadata: {
-                            ...article.metadata,
-                            status: 'pending_manual',
-                            note: 'n8n not configured'
-                        }
-                    })
-                    .eq('id', articleId);
-            }
+            // Process asynchronously (don't block the response)
+            processor.processPDF(
+                articleId,
+                botId,
+                urlData.signedUrl,
+                article.metadata.file_name
+            ).catch(error => {
+                fastify.log.error({ error, articleId }, 'PDF processing failed');
+            });
 
             return { status: 'processing' };
         } catch (error: any) {
