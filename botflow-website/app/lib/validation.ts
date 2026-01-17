@@ -44,7 +44,7 @@ export const URLSchema = z.string()
 export const WebhookSchema = z.object({
   url: URLSchema,
   method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
-  headers: z.record(z.string()).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
   auth_type: z.enum(['none', 'basic', 'bearer', 'api_key']).optional()
 });
 
