@@ -46,3 +46,4 @@ if (env.REDIS_HOST && env.REDIS_PORT) {
 }
 
 export default redis;
+export { redis };
