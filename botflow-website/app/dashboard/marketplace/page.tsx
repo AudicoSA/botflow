@@ -57,7 +57,8 @@ export default function MarketplacePage() {
 
   const fetchIntegrations = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/marketplace?per_page=100');
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/marketplace?per_page=100`);
       const data = await response.json();
       setIntegrations(data.integrations || []);
     } catch (error) {
