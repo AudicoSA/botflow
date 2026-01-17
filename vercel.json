@@ -1,0 +1,7 @@
+{
+  "buildCommand": "cd botflow-website && npm run build",
+  "outputDirectory": "botflow-website/.next",
+  "installCommand": "cd botflow-website && npm install",
+  "framework": "nextjs",
+  "regions": ["jnb1"]
+}
