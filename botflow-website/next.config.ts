@@ -5,3 +5,4 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+// Trigger Vercel deploy 1768710733
