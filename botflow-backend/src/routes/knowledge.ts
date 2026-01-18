@@ -160,19 +160,7 @@ async function processTextSource(articleId: string, botId: string, content: stri
  */
 async function processUrlSource(articleId: string, botId: string, url: string, log: any): Promise<void> {
     try {
-        log.info({ articleId, botId, url }, 'Starting URL source processing');
-
-        // Update status to processing
-        await supabaseAdmin
-            .from('knowledge_base_articles')
-            .update({
-                metadata: {
-                    status: 'processing',
-                    url,
-                    processing_started: new Date().toISOString()
-                }
-            })
-            .eq('id', articleId);
+        log.info({ articleId, botId, url }, 'Starting URL source processing (background)');
 
         // Fetch the URL content with better headers to avoid blocks
         const controller = new AbortController();
@@ -914,9 +902,25 @@ export default async function knowledgeRoutes(fastify: FastifyInstance) {
 
             // For URL sources, scrape and process
             if (source_type === 'url') {
-                // Scrape and process URL asynchronously
-                processUrlSource(article.id, botId, normalizedContent, fastify.log).catch(error => {
-                    fastify.log.error({ error, articleId: article.id }, 'URL processing failed');
+                fastify.log.info({ articleId: article.id, url: normalizedContent }, 'Starting async URL processing');
+
+                // Update status to processing immediately
+                await supabaseAdmin
+                    .from('knowledge_base_articles')
+                    .update({
+                        metadata: {
+                            ...article.metadata,
+                            status: 'processing',
+                            processing_started: new Date().toISOString()
+                        }
+                    })
+                    .eq('id', article.id);
+
+                // Scrape and process URL asynchronously using setImmediate to ensure it runs
+                setImmediate(() => {
+                    processUrlSource(article.id, botId, normalizedContent, fastify.log).catch(error => {
+                        fastify.log.error({ error: error.message, articleId: article.id }, 'URL processing failed in background');
+                    });
                 });
             }
 
