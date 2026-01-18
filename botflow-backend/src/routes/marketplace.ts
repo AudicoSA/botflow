@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { integrationMarketplaceService } from '../services/integration-marketplace.service.js';
 import { n8nMarketplaceService } from '../services/n8n-marketplace.service.js';
+import { credentialValidatorService } from '../services/credential-validator.service.js';
 import type {
   ListIntegrationsQuery,
   EnableIntegrationRequest,
@@ -430,6 +431,50 @@ export default async function marketplaceRoutes(fastify: FastifyInstance) {
         fastify.log.error(error);
         return reply.status(500).send({
           error: 'Failed to get integration logs',
+          message: error.message,
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/marketplace/:slug/validate-credentials
+   * Validate credentials for an integration without enabling it
+   * Useful for testing credentials before saving
+   * Requires authentication
+   */
+  fastify.post(
+    '/:slug/validate-credentials',
+    {
+      onRequest: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      try {
+        const { slug } = request.params as { slug: string };
+        const { credentials } = request.body as { credentials: Record<string, any> };
+
+        if (!credentials || Object.keys(credentials).length === 0) {
+          return reply.status(400).send({
+            error: 'Credentials required',
+            message: 'Please provide credentials to validate',
+          });
+        }
+
+        // Validate the credentials
+        const validationResult = await credentialValidatorService.validateCredentials(
+          slug,
+          credentials
+        );
+
+        return reply.send({
+          valid: validationResult.valid,
+          message: validationResult.message,
+          details: validationResult.details,
+        });
+      } catch (error: any) {
+        fastify.log.error(error);
+        return reply.status(500).send({
+          error: 'Credential validation failed',
           message: error.message,
         });
       }

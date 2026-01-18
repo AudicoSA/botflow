@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import { ValidationResult } from './ValidationResult';
 
 interface Integration {
   id: string;
@@ -12,11 +13,26 @@ interface Integration {
   icon_url?: string;
   requires_auth: boolean;
   auth_type?: string;
+  is_n8n_node?: boolean;
   setup_instructions?: {
     steps: string[];
     required_fields?: string[];
     required_scopes?: string[];
   };
+}
+
+interface ValidationResultType {
+  valid: boolean;
+  message: string;
+  details?: Record<string, any>;
+}
+
+interface BotIntegration {
+  id: string;
+  bot_id: string;
+  integration_id: string;
+  status: string;
+  credentials_encrypted?: string;
 }
 
 interface EnableIntegrationModalProps {
@@ -33,11 +49,22 @@ export function EnableIntegrationModal({ integration, onClose, onSuccess }: Enab
   const [bots, setBots] = useState<any[]>([]);
   const [selectedBotId, setSelectedBotId] = useState<string>('');
   const [loadingBots, setLoadingBots] = useState(true);
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<ValidationResultType | null>(null);
+  const [existingIntegration, setExistingIntegration] = useState<BotIntegration | null>(null);
+  const [isUpdateMode, setIsUpdateMode] = useState(false);
 
   // Fetch user's bots
   useEffect(() => {
     fetchBots();
   }, []);
+
+  // Check if integration already exists when bot selection changes
+  useEffect(() => {
+    if (selectedBotId) {
+      checkExistingIntegration();
+    }
+  }, [selectedBotId]);
 
   const fetchBots = async () => {
     try {
@@ -53,12 +80,76 @@ export function EnableIntegrationModal({ integration, onClose, onSuccess }: Enab
     }
   };
 
+  const checkExistingIntegration = async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('botflow_token') : null;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+      const response = await fetch(
+        `${apiUrl}/api/marketplace/bots/${selectedBotId}/integrations`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const existing = data.integrations?.find(
+          (i: any) => i.integration_id === integration.id || i.integration_slug === integration.slug
+        );
+        setExistingIntegration(existing || null);
+        setIsUpdateMode(!!existing);
+      }
+    } catch (err) {
+      console.error('Failed to check existing integration:', err);
+    }
+  };
+
   // Get required fields from setup instructions
   const requiredFields = integration.setup_instructions?.required_fields || [];
   const steps = integration.setup_instructions?.steps || [];
 
   const handleInputChange = (field: string, value: string) => {
     setCredentials(prev => ({ ...prev, [field]: value }));
+    // Clear validation when credentials change
+    if (validationResult) {
+      setValidationResult(null);
+    }
+  };
+
+  const handleValidateCredentials = async () => {
+    setIsValidating(true);
+    setValidationResult(null);
+    setError(null);
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('botflow_token') : null;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+      const response = await fetch(
+        `${apiUrl}/api/marketplace/${integration.slug}/validate-credentials`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ credentials }),
+        }
+      );
+
+      const result = await response.json();
+      setValidationResult(result);
+    } catch (err) {
+      setValidationResult({
+        valid: false,
+        message: 'Failed to validate credentials. Please check your network connection.',
+      });
+    } finally {
+      setIsValidating(false);
+    }
   };
 
   const handleEnable = async () => {
@@ -70,26 +161,49 @@ export function EnableIntegrationModal({ integration, onClose, onSuccess }: Enab
         throw new Error('Please select a bot');
       }
 
-      // Get token from localStorage
       const token = typeof window !== 'undefined' ? localStorage.getItem('botflow_token') : null;
-
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/marketplace/${integration.slug}/enable`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          bot_id: selectedBotId,
-          credentials,
-          configuration: {},
-        }),
-      });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to enable integration');
+      if (isUpdateMode && existingIntegration) {
+        // Update existing integration
+        const response = await fetch(
+          `${apiUrl}/api/marketplace/bot-integrations/${existingIntegration.id}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              credentials,
+              configuration: {},
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.message || 'Failed to update integration');
+        }
+      } else {
+        // Enable new integration
+        const response = await fetch(`${apiUrl}/api/marketplace/${integration.slug}/enable`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            bot_id: selectedBotId,
+            credentials,
+            configuration: {},
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.message || 'Failed to enable integration');
+        }
       }
 
       onSuccess();
@@ -129,7 +243,7 @@ export function EnableIntegrationModal({ integration, onClose, onSuccess }: Enab
                 )}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    Enable {integration.name}
+                    {isUpdateMode ? 'Update' : 'Enable'} {integration.name}
                   </h3>
                   <p className="text-sm text-gray-500">{integration.description}</p>
                 </div>
@@ -147,6 +261,23 @@ export function EnableIntegrationModal({ integration, onClose, onSuccess }: Enab
 
           {/* Content */}
           <div className="bg-white px-6 py-4 max-h-96 overflow-y-auto">
+            {/* Update Mode Banner */}
+            {isUpdateMode && (
+              <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-medium text-blue-800">Integration already enabled</p>
+                    <p className="text-sm text-blue-700 mt-1">
+                      Enter new credentials below to update. Use "Test Credentials" to verify before saving.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Bot Selection */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -217,6 +348,57 @@ export function EnableIntegrationModal({ integration, onClose, onSuccess }: Enab
                     />
                   </div>
                 ))}
+
+                {/* Test Credentials Button */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleValidateCredentials}
+                    disabled={isValidating || !requiredFields.every(field => credentials[field]?.trim())}
+                    className={`w-full px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      isValidating || !requiredFields.every(field => credentials[field]?.trim())
+                        ? 'border-gray-300 text-gray-400 cursor-not-allowed'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {isValidating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Validating...
+                      </span>
+                    ) : (
+                      'Test Credentials'
+                    )}
+                  </button>
+                </div>
+
+                {/* Validation Result */}
+                {validationResult && (
+                  <div className="pt-2">
+                    <ValidationResult result={validationResult} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* n8n Integration Info */}
+            {integration.is_n8n_node && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <div className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M12 3v6M12 15v6M3 12h6M15 12h6" />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-medium text-orange-800">Powered by n8n</p>
+                    <p className="text-sm text-orange-700 mt-1">
+                      This integration runs through n8n workflow automation, giving you advanced customization options.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -263,7 +445,10 @@ export function EnableIntegrationModal({ integration, onClose, onSuccess }: Enab
                   : 'bg-blue-600 hover:bg-blue-700'
               }`}
             >
-              {loading ? 'Enabling...' : 'Enable Integration'}
+              {loading
+                ? (isUpdateMode ? 'Updating...' : 'Enabling...')
+                : (isUpdateMode ? 'Update Credentials' : 'Enable Integration')
+              }
             </button>
           </div>
         </div>

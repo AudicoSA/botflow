@@ -8,6 +8,7 @@
 
 import { logger } from '../config/logger.js';
 import { env } from '../config/env.js';
+import { n8nMcpService } from './n8n-mcp.service.js';
 
 // Category mapping from n8n node types to marketplace categories
 const CATEGORY_MAPPING: Record<string, string> = {
@@ -154,19 +155,21 @@ export class N8nMarketplaceService {
    * Check if n8n MCP is available
    */
   private isN8nMcpAvailable(): boolean {
-    // Check if n8n MCP server is configured
-    // This would check for MCP connection
-    return false; // TODO: Implement MCP detection
+    return n8nMcpService.isAvailable();
   }
 
   /**
    * Fetch nodes via n8n MCP (preferred method)
    */
   private async fetchNodesViaMcp(): Promise<N8nNode[]> {
-    // TODO: Use n8n MCP to fetch nodes
-    // For now, return empty array
-    logger.info('n8n MCP not yet implemented');
-    return [];
+    try {
+      const nodes = await n8nMcpService.getAllNodes();
+      logger.info({ count: nodes.length }, 'Fetched nodes via n8n-MCP');
+      return nodes as N8nNode[];
+    } catch (error) {
+      logger.error({ error }, 'Failed to fetch nodes via n8n-MCP');
+      return [];
+    }
   }
 
   /**

@@ -1,5 +1,7 @@
-import { supabase } from '../config/supabase.js';
+import { supabase, supabaseAdmin } from '../config/supabase.js';
 import { encryptionService } from './encryption.service.js';
+import { credentialValidatorService } from './credential-validator.service.js';
+import { logger } from '../config/logger.js';
 import type {
   Integration,
   BotIntegration,
@@ -11,6 +13,9 @@ import type {
   IntegrationWithStatus,
   IntegrationCategory,
 } from '../types/marketplace.js';
+
+// Note: We use supabaseAdmin (service role) for bot_integrations and integration_logs
+// to bypass RLS policies that cause infinite recursion when querying organization_members
 
 export class IntegrationMarketplaceService {
   /**
@@ -129,8 +134,8 @@ export class IntegrationMarketplaceService {
       throw new Error(`Failed to get recommended integrations: ${integrationsError.message}`);
     }
 
-    // Get enabled integrations for this bot
-    const { data: botIntegrations, error: botIntegrationsError } = await supabase
+    // Get enabled integrations for this bot (use admin client to bypass RLS)
+    const { data: botIntegrations, error: botIntegrationsError } = await supabaseAdmin
       .from('bot_integrations')
       .select('integration_id, id, status')
       .eq('bot_id', botId);
@@ -171,8 +176,8 @@ export class IntegrationMarketplaceService {
     // Get integration details
     const integration = await this.getIntegration(integrationSlug);
 
-    // Check if already enabled
-    const { data: existing } = await supabase
+    // Check if already enabled (use admin client to bypass RLS)
+    const { data: existing } = await supabaseAdmin
       .from('bot_integrations')
       .select('*')
       .eq('bot_id', bot_id)
@@ -183,13 +188,28 @@ export class IntegrationMarketplaceService {
       throw new Error('Integration already enabled for this bot');
     }
 
+    // Validate credentials before saving (if credentials provided and integration requires auth)
+    if (credentials && Object.keys(credentials).length > 0 && integration.requires_auth) {
+      logger.info({ integrationSlug, bot_id }, 'Validating credentials before enabling integration');
+      const validationResult = await credentialValidatorService.validateCredentials(
+        integrationSlug,
+        credentials
+      );
+
+      if (!validationResult.valid) {
+        throw new Error(`Credential validation failed: ${validationResult.message}`);
+      }
+
+      logger.info({ integrationSlug, validationResult }, 'Credentials validated successfully');
+    }
+
     // Encrypt credentials before storing
     const encryptedCredentials = credentials
       ? encryptionService.encrypt(credentials)
       : encryptionService.encrypt({});
 
-    // Create bot integration record
-    const { data: botIntegration, error } = await supabase
+    // Create bot integration record (use admin client to bypass RLS)
+    const { data: botIntegration, error } = await supabaseAdmin
       .from('bot_integrations')
       .insert({
         bot_id,
@@ -212,8 +232,8 @@ export class IntegrationMarketplaceService {
       message: 'Integration enabled successfully',
     });
 
-    // Increment popularity score
-    await supabase
+    // Increment popularity score (use admin client)
+    await supabaseAdmin
       .from('integration_marketplace')
       .update({ popularity_score: integration.popularity_score + 1 })
       .eq('id', integration.id);
@@ -231,14 +251,40 @@ export class IntegrationMarketplaceService {
     const { credentials, configuration, status } = request;
 
     const updateData: any = {};
-    if (credentials !== undefined) {
+    if (credentials !== undefined && Object.keys(credentials).length > 0) {
+      // Get the existing bot integration to find the integration slug for validation
+      const existingIntegration = await this.getBotIntegration(botIntegrationId);
+
+      // Get the integration details to check if it requires auth
+      const { data: marketplaceIntegration } = await supabaseAdmin
+        .from('integration_marketplace')
+        .select('slug, requires_auth')
+        .eq('id', existingIntegration.integration_id)
+        .single();
+
+      // Validate credentials if the integration requires auth
+      if (marketplaceIntegration?.requires_auth) {
+        logger.info({ botIntegrationId, slug: marketplaceIntegration.slug }, 'Validating updated credentials');
+        const validationResult = await credentialValidatorService.validateCredentials(
+          marketplaceIntegration.slug,
+          credentials
+        );
+
+        if (!validationResult.valid) {
+          throw new Error(`Credential validation failed: ${validationResult.message}`);
+        }
+
+        logger.info({ botIntegrationId, validationResult }, 'Updated credentials validated successfully');
+      }
+
       // Encrypt credentials before storing
       updateData.credentials = encryptionService.encrypt(credentials);
     }
     if (configuration !== undefined) updateData.configuration = configuration;
     if (status !== undefined) updateData.status = status;
 
-    const { data: botIntegration, error } = await supabase
+    // Use admin client to bypass RLS
+    const { data: botIntegration, error } = await supabaseAdmin
       .from('bot_integrations')
       .update(updateData)
       .eq('id', botIntegrationId)
@@ -270,7 +316,8 @@ export class IntegrationMarketplaceService {
       message: 'Integration disabled',
     });
 
-    const { error } = await supabase
+    // Use admin client to bypass RLS
+    const { error } = await supabaseAdmin
       .from('bot_integrations')
       .delete()
       .eq('id', botIntegrationId);
@@ -284,7 +331,8 @@ export class IntegrationMarketplaceService {
    * Get all enabled integrations for a bot
    */
   async getBotIntegrations(botId: string): Promise<BotIntegration[]> {
-    const { data, error } = await supabase
+    // Use admin client to bypass RLS
+    const { data, error } = await supabaseAdmin
       .from('bot_integrations')
       .select('*')
       .eq('bot_id', botId)
@@ -305,7 +353,8 @@ export class IntegrationMarketplaceService {
    * Get a specific bot integration
    */
   async getBotIntegration(botIntegrationId: string): Promise<BotIntegration> {
-    const { data, error } = await supabase
+    // Use admin client to bypass RLS
+    const { data, error } = await supabaseAdmin
       .from('bot_integrations')
       .select('*')
       .eq('id', botIntegrationId)
@@ -333,7 +382,8 @@ export class IntegrationMarketplaceService {
     botIntegrationId: string,
     limit: number = 50
   ): Promise<IntegrationLog[]> {
-    const { data, error } = await supabase
+    // Use admin client to bypass RLS
+    const { data, error } = await supabaseAdmin
       .from('integration_logs')
       .select('*')
       .eq('bot_integration_id', botIntegrationId)
@@ -362,7 +412,8 @@ export class IntegrationMarketplaceService {
       duration_ms?: number;
     }
   ): Promise<void> {
-    const { error } = await supabase.from('integration_logs').insert({
+    // Use admin client to bypass RLS
+    const { error } = await supabaseAdmin.from('integration_logs').insert({
       bot_integration_id: botIntegrationId,
       ...log,
     });
@@ -371,20 +422,20 @@ export class IntegrationMarketplaceService {
       console.error('Failed to log integration event:', error);
     }
 
-    // Update last_synced_at and sync_count
+    // Update last_synced_at and sync_count (use admin client)
     if (log.event_type === 'sync' && log.status === 'success') {
-      await supabase
+      await supabaseAdmin
         .from('bot_integrations')
         .update({
           last_synced_at: new Date().toISOString(),
-          sync_count: supabase.rpc('increment_sync_count', { row_id: botIntegrationId }),
+          sync_count: supabaseAdmin.rpc('increment_sync_count', { row_id: botIntegrationId }),
         })
         .eq('id', botIntegrationId);
     }
 
-    // Update status if error
+    // Update status if error (use admin client)
     if (log.status === 'failure') {
-      await supabase
+      await supabaseAdmin
         .from('bot_integrations')
         .update({
           status: 'error',

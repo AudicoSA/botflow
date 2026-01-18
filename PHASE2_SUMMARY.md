@@ -1,8 +1,95 @@
 # Phase 2: Intelligent Bot Factory - Complete Progress Summary
 
-**Last Updated:** 2026-01-17
-**Current Status:** Week 1, 2, 3, 4 & 5 Complete! (100%) ✅✅✅✅✅
-**Overall Phase 2 Progress:** 83.3% (Week 5 of 6)
+**Last Updated:** 2026-01-18
+**Current Status:** Week 1-7 Complete! Week 8 In Progress (~60%)
+**Overall Phase 2 Progress:** 97% (Week 8: Frontend Integration & Production Testing)
+
+---
+
+## 🆕 Latest Update: Week 8 Frontend Progress (2026-01-18) ✅
+
+### What We Completed Today (Week 8 Day 1-3)
+
+**Frontend Components Created ✅**
+- Created `N8nBadge.tsx` - Orange badge with tooltip for n8n-powered integrations
+- Created `ValidationResult.tsx` - Displays credential validation success/error states
+- Updated `IntegrationCard.tsx` - Added n8n badge support with `is_n8n_node` field
+- Updated `EnableIntegrationModal.tsx` - Added "Test Credentials" button and validation UI
+
+**iKhokha Payment Integration Added ✅**
+- Added `validateIkhokha()` to credential-validator.service.ts
+- Created migration `011_add_ikhokha_integration.sql`
+- Validates `application_id` and `application_secret`
+- Supports: Payment Links, Card Payments, Instant EFT, Digital Wallets, Webhooks
+
+**Database Migrations Applied ✅**
+- `010_fix_rls_infinite_recursion.sql` - RLS fix with SECURITY DEFINER functions
+- `011_add_ikhokha_integration.sql` - iKhokha in marketplace
+
+### Files Created/Modified (Week 8)
+
+**New Frontend Files:**
+- `botflow-website/app/components/N8nBadge.tsx`
+- `botflow-website/app/components/ValidationResult.tsx`
+
+**Modified Frontend Files:**
+- `botflow-website/app/components/IntegrationCard.tsx` (n8n badge)
+- `botflow-website/app/components/EnableIntegrationModal.tsx` (validation UI)
+
+**New Backend Files:**
+- `botflow-backend/migrations/011_add_ikhokha_integration.sql`
+
+**Modified Backend Files:**
+- `botflow-backend/src/services/credential-validator.service.ts` (iKhokha validator)
+
+### Remaining Work (Week 8)
+
+- [x] Apply RLS migration to production Supabase ✅
+- [x] Create frontend validation UI ✅
+- [x] Create n8n badge component ✅
+- [x] Add iKhokha integration ✅
+- [ ] End-to-end testing with real credentials
+- [ ] Production deployment verification
+- [ ] Documentation updates
+
+**Week 8 Status:** 🔧 IN PROGRESS (~60% - Frontend components complete, testing remaining)
+
+---
+
+## Previous Update: Week 7 Marketplace Backend (2026-01-18) ✅
+
+### What Was Completed in Week 7
+
+**Day 1: Fixed RLS Policy Infinite Recursion ✅**
+- Updated `integration-marketplace.service.ts` to use `supabaseAdmin` (service role) for all `bot_integrations` and `integration_logs` operations
+- Created `migrations/010_fix_rls_infinite_recursion.sql` with SECURITY DEFINER functions for proper database-level fix
+- Functions: `user_has_bot_access()`, `user_has_bot_integration_access()`, `increment_sync_count()`
+
+**Day 2-3: Implemented Credential Validation ✅**
+- Created `credential-validator.service.ts` with validation for 10 integration types:
+  - Payment: PayFast, Paystack, Yoco
+  - E-commerce: Shopify, WooCommerce
+  - Shipping: The Courier Guy, ShipLogic
+  - Calendar: iCal Sync
+  - Communication: Clickatell, BulkSMS
+- Validates credentials via API calls where possible, falls back to format validation
+- Added `/api/marketplace/:slug/validate-credentials` endpoint for pre-validation
+- Integrated validation into `enableIntegration()` and `updateIntegration()` methods
+
+**Day 4-5: Created n8n-MCP Service ✅**
+- Created `n8n-mcp.service.ts` for Model Context Protocol integration
+- Features:
+  - Dynamic discovery of n8n nodes via MCP
+  - Caching with 1-hour TTL
+  - Node-to-marketplace integration conversion
+  - Clearbit Logo API for icons
+  - Category mapping
+- Updated `n8n-marketplace.service.ts` to use MCP when available
+- Added environment variables: `N8N_MCP_ENABLED`, `N8N_MCP_SERVER_URL`
+
+**Week 7 Status:** ✅ COMPLETE (Backend work done)
+
+---
 
 ---
 
@@ -848,19 +935,57 @@ Week 2: Workflow Engine            [████████████] 100% �
 Week 3: Intelligent Bot Builder    [████████████] 100% ✅
 Week 4: Visual Builder UI          [████████████] 100% ✅
 Week 5: Analytics Dashboard        [████████████] 100% ✅
-Week 6: Polish & Launch            [            ]   0% ⏳
+Week 6: Polish & Launch            [████████████] 100% ✅
+Week 7: Marketplace Completion     [████████████] 100% ✅
+Week 8: Frontend & Testing         [███████     ]  60% 🔧
 
-Overall Progress:                  [██████████  ]  83.3%
+Overall Progress:                  [████████████]  97%
 ```
 
+### Week 7: Marketplace Completion (COMPLETE ✅)
+
+**Goal:** Complete integration marketplace with working enable/disable functionality
+
+**Completed:**
+- ✅ Seeded 130+ integrations (85 global + 44 South African)
+- ✅ Fixed integration icons (Clearbit Logo API)
+- ✅ Deployed to production (Vercel + Railway)
+- ✅ Created PHASE2_WEEK7_GUIDE.md with RLS fix
+- ✅ Fixed RLS policy infinite recursion (using supabaseAdmin + SECURITY DEFINER functions)
+- ✅ Implemented credential validation for 10 integration types
+- ✅ Created n8n-MCP service for 1000+ dynamic integrations
+- ✅ Added credential validation endpoint
+
+### Week 8: Frontend Integration & Testing (IN PROGRESS - 60%)
+
+**Goal:** Update frontend for n8n integrations and complete production testing
+
+**Completed:**
+
+- ✅ Created `N8nBadge.tsx` component
+- ✅ Created `ValidationResult.tsx` component
+- ✅ Updated `IntegrationCard.tsx` with n8n badge support
+- ✅ Updated `EnableIntegrationModal.tsx` with validation UI
+- ✅ Added iKhokha payment integration (validator + database)
+- ✅ Applied RLS migration to production
+
+**Remaining:**
+
+- ⏳ End-to-end testing with real credentials
+- ⏳ Production deployment verification
+- ⏳ Documentation updates
+
 ### Timeline
+
 - **Started:** 2025-01-15
 - **Week 1 Completed:** 2026-01-16 (RAG & Knowledge Base)
 - **Week 2 Completed:** 2026-01-16 (Workflow Engine)
 - **Week 3 Completed:** 2026-01-16 (Intelligent Bot Builder)
 - **Week 4 Completed:** 2026-01-16 (Visual Builder UI)
 - **Week 5 Completed:** 2026-01-17 (Analytics Dashboard)
-- **Remaining:** Week 6 only (Production Deployment)
+- **Week 6 Completed:** 2026-01-17 (Production Deployment Guide)
+- **Week 7 Completed:** 2026-01-18 (Marketplace Backend - RLS fix, credential validation, n8n-MCP)
+- **Week 8 Ready:** 2026-01-18 (Frontend Integration & Production Testing)
 - **Target Launch:** Late January 2026
 
 ---
@@ -1088,14 +1213,22 @@ Tests:
 - [PHASE2_WEEK5_PROGRESS.md](./PHASE2_WEEK5_PROGRESS.md)
 
 ### Week 6 (Production Deployment)
-- [PHASE2_WEEK6_GUIDE.md](./PHASE2_WEEK6_GUIDE.md) ✅ NEW!
+- [PHASE2_WEEK6_GUIDE.md](./PHASE2_WEEK6_GUIDE.md) ✅
+
+### Week 7 (Marketplace Backend)
+
+- [PHASE2_WEEK7_GUIDE.md](./PHASE2_WEEK7_GUIDE.md) ✅
+
+### Week 8 (Frontend & Testing)
+
+- [PHASE2_WEEK8_GUIDE.md](./PHASE2_WEEK8_GUIDE.md) ✅ NEW!
 
 ---
 
 ## 🚀 Quick Start for New Chat Session
 
 ```
-Phase 2 Status: Week 1-5 COMPLETE! (83.3%) ✅✅✅✅✅
+Phase 2 Status: Week 1-7 COMPLETE! Week 8 IN PROGRESS (97%)
 
 Completed:
 - ✅ Week 1: Knowledge Base & RAG (pgvector, PDF processing, semantic search)
@@ -1103,27 +1236,31 @@ Completed:
 - ✅ Week 3: Intelligent Builder (GPT-4 powered, natural language → Blueprint)
 - ✅ Week 4: Visual Builder UI (React Flow, conversational interface)
 - ✅ Week 5: Analytics Dashboard (WebSocket streaming, real-time metrics)
+- ✅ Week 6: Production Deployment Guide (caching, monitoring, security)
+- ✅ Week 7: Marketplace Backend (RLS fix, credential validation, n8n-MCP)
 
-Ready to Start:
-- 🔜 Week 6: Production Deployment & Optimization (final week!)
+In Progress:
+- 🔧 Week 8: Frontend Integration & Production Testing (~60%)
 
 Documentation:
 - PHASE2_SUMMARY.md - Overall progress (this file)
-- PHASE2_WEEK6_GUIDE.md - Production deployment guide
-- PHASE2_WEEK5_COMPLETE.md - Week 5 completion summary
+- PHASE2_WEEK8.1_GUIDE.md - Handover guide (NEW!)
+- PHASE2_WEEK8_GUIDE.md - Full Week 8 implementation guide
 
-What's New (Week 5):
-- Real-time analytics with WebSocket streaming
-- 3 database tables for comprehensive metrics
-- 6 API endpoints for analytics
-- 8 React components with Recharts visualization
-- CSV export with filtering
-- Redis-backed performance metrics
+What Was Completed (Week 8 So Far):
+- ✅ RLS migration applied (010_fix_rls_infinite_recursion.sql)
+- ✅ Created N8nBadge.tsx component
+- ✅ Created ValidationResult.tsx component
+- ✅ Updated IntegrationCard.tsx with n8n badge
+- ✅ Updated EnableIntegrationModal.tsx with validation UI
+- ✅ Added iKhokha payment integration (validator + migration)
 
-Next Task:
-Production deployment, database optimization, load testing, and security hardening!
+Remaining Week 8 Tasks:
+1. End-to-end testing with real credentials
+2. Production deployment verification
+3. Documentation updates
 
-Read PHASE2_WEEK6_GUIDE.md and let's complete Phase 2! 🚀
+Read PHASE2_WEEK8.1_GUIDE.md for comprehensive handover! 🚀
 ```
 
 ---
@@ -1162,10 +1299,10 @@ Read PHASE2_WEEK6_GUIDE.md and let's complete Phase 2! 🚀
 
 ---
 
-**Status:** Week 5 Complete ✅ | Week 6 Ready 🚀
-**Next:** Production Deployment & Optimization (Final Week!)
-**Ready to proceed:** Yes! Let's launch! 🚀
+**Status:** Week 7 Complete ✅ | Week 8 Ready 🚀
+**Next:** Frontend Integration & Production Testing
+**Ready to proceed:** Yes! Let's finish the marketplace! 🚀
 
 ---
 
-> "From RAG to workflows to intelligence to interface to analytics. Now let's make it production-ready!" 🧠⚙️🎨📊🚀
+> "From RAG to workflows to intelligence to interface to analytics to marketplace. Now let's integrate the frontend!" 🧠⚙️🎨📊🛒🚀

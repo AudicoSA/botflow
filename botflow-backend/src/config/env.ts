@@ -38,6 +38,10 @@ const envSchema = z.object({
     N8N_WEBHOOK_URL: z.string().url().optional(),
     N8N_WEBHOOK_SECRET: z.string().min(32).optional(), // For HMAC signature verification
 
+    // n8n-MCP (Model Context Protocol integration)
+    N8N_MCP_ENABLED: z.string().optional().transform(val => val === 'true'),
+    N8N_MCP_SERVER_URL: z.string().url().optional(),
+
     // Stripe (deprecated for SA - use Paystack)
     STRIPE_SECRET_KEY: z.string().optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),

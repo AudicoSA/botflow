@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { N8nBadge } from './N8nBadge';
 
 interface Integration {
   id: string;
@@ -12,6 +13,8 @@ interface Integration {
   pricing_model: string;
   is_featured: boolean;
   is_direct_integration: boolean;
+  is_n8n_node?: boolean;
+  n8n_node_type?: string;
   supported_features: string[];
 }
 
@@ -54,11 +57,18 @@ export function IntegrationCard({ integration, onEnable, isEnabled = false }: In
       )}
 
       {/* Direct Integration Badge */}
-      {integration.is_direct_integration && (
+      {integration.is_direct_integration && !integration.is_n8n_node && (
         <div className="absolute top-2 left-2">
           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
             ⚡ Direct
           </span>
+        </div>
+      )}
+
+      {/* n8n Badge */}
+      {integration.is_n8n_node && (
+        <div className="absolute top-2 left-2">
+          <N8nBadge tooltip={integration.n8n_node_type ? `n8n node: ${integration.n8n_node_type}` : undefined} />
         </div>
       )}
 
