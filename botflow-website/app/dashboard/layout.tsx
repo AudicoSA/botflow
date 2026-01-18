@@ -16,6 +16,9 @@ export default function DashboardLayout({
     const [userEmail, setUserEmail] = useState('');
     const [isDesktop, setIsDesktop] = useState(false);
 
+    // Check if we're on the workflow builder page - auto minimize sidebar
+    const isWorkflowPage = pathname?.includes('/workflow');
+
     useEffect(() => {
         // Get user email from localStorage
         if (typeof window !== 'undefined') {
@@ -31,11 +34,11 @@ export default function DashboardLayout({
             }
         }
 
-        // Check if desktop and open sidebar by default
+        // Check if desktop and open sidebar by default (unless on workflow page)
         const handleResize = () => {
             const isDesktopView = window.innerWidth >= 1024;
             setIsDesktop(isDesktopView);
-            if (isDesktopView) {
+            if (isDesktopView && !isWorkflowPage) {
                 setSidebarOpen(true);
             } else {
                 setSidebarOpen(false);
@@ -45,7 +48,7 @@ export default function DashboardLayout({
         handleResize();
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    }, [isWorkflowPage]);
 
     const handleLogout = () => {
         if (typeof window !== 'undefined') {
@@ -80,8 +83,8 @@ export default function DashboardLayout({
             `}>
                 <div className="flex flex-col h-full">
                     {/* Logo */}
-                    <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200">
-                        {(sidebarOpen || isDesktop) && (
+                    <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
+                        {sidebarOpen ? (
                             <div className="flex items-center gap-3">
                                 <div className="relative w-auto h-[2.75rem] min-w-[108px] rounded-lg flex items-center justify-start">
                                     <Image
@@ -92,6 +95,10 @@ export default function DashboardLayout({
                                         priority
                                     />
                                 </div>
+                            </div>
+                        ) : (
+                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-blue to-primary-cyan flex items-center justify-center text-white font-bold text-lg">
+                                B
                             </div>
                         )}
                         <button
@@ -107,7 +114,7 @@ export default function DashboardLayout({
                     {/* Navigation */}
                     <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
                         {navigation.map((item) => {
-                            const isActive = pathname === item.href;
+                            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
                             return (
                                 <Link
                                     key={item.name}
@@ -121,27 +128,24 @@ export default function DashboardLayout({
                                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
                                         ? 'bg-primary-blue text-white'
                                         : 'text-gray-700 hover:bg-gray-100'
-                                        }`}
+                                        } ${!sidebarOpen ? 'justify-center' : ''}`}
+                                    title={!sidebarOpen ? item.name : undefined}
                                 >
                                     <span className="text-xl">{item.icon}</span>
-                                    <span className="font-medium">{item.name}</span>
+                                    {sidebarOpen && <span className="font-medium">{item.name}</span>}
                                 </Link>
                             );
                         })}
                     </nav>
 
                     {/* User menu */}
-                    <div className="p-4 border-t border-gray-200">
-                        <div className="flex items-center gap-3 px-4 py-3 rounded-lg">
+                    <div className={`p-4 border-t border-gray-200 ${!sidebarOpen ? 'flex flex-col items-center' : ''}`}>
+                        <div className={`flex items-center gap-3 px-4 py-3 rounded-lg ${!sidebarOpen ? 'justify-center px-0' : ''}`}>
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-blue to-primary-cyan flex items-center justify-center text-white font-semibold flex-shrink-0">
                                 {userEmail ? userEmail.charAt(0).toUpperCase() : 'U'}
                             </div>
-                            <div className="flex-1 lg:hidden">
-                                <p className="text-sm font-medium text-gray-900 truncate">{userEmail || 'User'}</p>
-                                <p className="text-xs text-gray-500">Starter Plan</p>
-                            </div>
                             {sidebarOpen && (
-                                <div className="flex-1 hidden lg:block">
+                                <div className="flex-1">
                                     <p className="text-sm font-medium text-gray-900 truncate">{userEmail || 'User'}</p>
                                     <p className="text-xs text-gray-500">Starter Plan</p>
                                 </div>
@@ -149,24 +153,14 @@ export default function DashboardLayout({
                         </div>
                         <button
                             onClick={handleLogout}
-                            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-2 lg:hidden"
+                            className={`flex items-center gap-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-2 ${sidebarOpen ? 'w-full px-4 py-2' : 'p-2 justify-center'}`}
+                            title={!sidebarOpen ? 'Logout' : undefined}
                         >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                             </svg>
-                            Logout
+                            {sidebarOpen && 'Logout'}
                         </button>
-                        {sidebarOpen && (
-                            <button
-                                onClick={handleLogout}
-                                className="w-full hidden lg:flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-2"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                </svg>
-                                Logout
-                            </button>
-                        )}
                     </div>
                 </div>
             </aside>

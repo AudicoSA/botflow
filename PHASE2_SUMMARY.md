@@ -1,58 +1,87 @@
 # Phase 2: Intelligent Bot Factory - Complete Progress Summary
 
 **Last Updated:** 2026-01-18
-**Current Status:** Week 1-7 Complete! Week 8 In Progress (~60%)
-**Overall Phase 2 Progress:** 97% (Week 8: Frontend Integration & Production Testing)
+**Current Status:** Week 1-7 Complete! Week 8 In Progress (~70%)
+**Overall Phase 2 Progress:** 98% (Week 8: Frontend Integration & Production Testing)
 
 ---
 
-## 🆕 Latest Update: Week 8 Frontend Progress (2026-01-18) ✅
+## 🆕 Latest Update: Week 8 Session 2 (2026-01-18) ✅
 
-### What We Completed Today (Week 8 Day 1-3)
+### What We Completed Today (Session 2)
+
+**Fixed Missing Credential Fields ✅**
+
+- Applied migration `012_fix_integration_setup_instructions.sql`
+- Added `required_fields` to 11 integrations that were missing them
+- Users can now see and fill credential fields for all integrations
+
+**Added Credential Update Support ✅**
+
+- `EnableIntegrationModal.tsx` now supports updating existing credentials
+- Auto-detects when integration is already enabled for selected bot
+- Shows "Update" mode with blue info banner
+- Uses PATCH endpoint to update credentials
+
+**All Changes Pushed to GitHub ✅**
+
+- Commit: `2642d09`
+- 19 files changed, 4518 insertions
+- Deployments triggered (Vercel + Railway)
+
+### Files Created/Modified (Session 2)
+
+**Modified Frontend:**
+
+- `EnableIntegrationModal.tsx` - Added update mode with auto-detection
+
+**New Migrations:**
+
+- `012_fix_integration_setup_instructions.sql` - Fix required_fields for 11 integrations
+
+**Documentation:**
+
+- `PHASE2_WEEK8.2_GUIDE.md` - Session 2 handover
+
+---
+
+## Previous Update: Week 8 Session 1 (2026-01-18) ✅
+
+### What We Completed (Session 1)
 
 **Frontend Components Created ✅**
+
 - Created `N8nBadge.tsx` - Orange badge with tooltip for n8n-powered integrations
 - Created `ValidationResult.tsx` - Displays credential validation success/error states
 - Updated `IntegrationCard.tsx` - Added n8n badge support with `is_n8n_node` field
 - Updated `EnableIntegrationModal.tsx` - Added "Test Credentials" button and validation UI
 
 **iKhokha Payment Integration Added ✅**
+
 - Added `validateIkhokha()` to credential-validator.service.ts
 - Created migration `011_add_ikhokha_integration.sql`
 - Validates `application_id` and `application_secret`
 - Supports: Payment Links, Card Payments, Instant EFT, Digital Wallets, Webhooks
 
 **Database Migrations Applied ✅**
+
 - `010_fix_rls_infinite_recursion.sql` - RLS fix with SECURITY DEFINER functions
 - `011_add_ikhokha_integration.sql` - iKhokha in marketplace
 
-### Files Created/Modified (Week 8)
-
-**New Frontend Files:**
-- `botflow-website/app/components/N8nBadge.tsx`
-- `botflow-website/app/components/ValidationResult.tsx`
-
-**Modified Frontend Files:**
-- `botflow-website/app/components/IntegrationCard.tsx` (n8n badge)
-- `botflow-website/app/components/EnableIntegrationModal.tsx` (validation UI)
-
-**New Backend Files:**
-- `botflow-backend/migrations/011_add_ikhokha_integration.sql`
-
-**Modified Backend Files:**
-- `botflow-backend/src/services/credential-validator.service.ts` (iKhokha validator)
-
-### Remaining Work (Week 8)
+### Week 8 Progress Checklist
 
 - [x] Apply RLS migration to production Supabase ✅
 - [x] Create frontend validation UI ✅
 - [x] Create n8n badge component ✅
 - [x] Add iKhokha integration ✅
+- [x] Fix missing required_fields in setup_instructions ✅
+- [x] Add credential update support ✅
+- [x] Push all changes to GitHub ✅
 - [ ] End-to-end testing with real credentials
 - [ ] Production deployment verification
 - [ ] Documentation updates
 
-**Week 8 Status:** 🔧 IN PROGRESS (~60% - Frontend components complete, testing remaining)
+**Week 8 Status:** 🔧 IN PROGRESS (~70% - Update mode complete, testing remaining)
 
 ---
 
@@ -937,9 +966,9 @@ Week 4: Visual Builder UI          [████████████] 100% �
 Week 5: Analytics Dashboard        [████████████] 100% ✅
 Week 6: Polish & Launch            [████████████] 100% ✅
 Week 7: Marketplace Completion     [████████████] 100% ✅
-Week 8: Frontend & Testing         [███████     ]  60% 🔧
+Week 8: Frontend & Testing         [████████    ]  70% 🔧
 
-Overall Progress:                  [████████████]  97%
+Overall Progress:                  [████████████]  98%
 ```
 
 ### Week 7: Marketplace Completion (COMPLETE ✅)
@@ -1228,7 +1257,7 @@ Tests:
 ## 🚀 Quick Start for New Chat Session
 
 ```
-Phase 2 Status: Week 1-7 COMPLETE! Week 8 IN PROGRESS (97%)
+Phase 2 Status: Week 1-7 COMPLETE! Week 8 IN PROGRESS (98%)
 
 Completed:
 - ✅ Week 1: Knowledge Base & RAG (pgvector, PDF processing, semantic search)
@@ -1240,11 +1269,12 @@ Completed:
 - ✅ Week 7: Marketplace Backend (RLS fix, credential validation, n8n-MCP)
 
 In Progress:
-- 🔧 Week 8: Frontend Integration & Production Testing (~60%)
+- 🔧 Week 8: Frontend Integration & Production Testing (~70%)
 
 Documentation:
 - PHASE2_SUMMARY.md - Overall progress (this file)
-- PHASE2_WEEK8.1_GUIDE.md - Handover guide (NEW!)
+- PHASE2_WEEK8.2_GUIDE.md - Latest handover guide
+- PHASE2_WEEK8.1_GUIDE.md - Previous handover guide
 - PHASE2_WEEK8_GUIDE.md - Full Week 8 implementation guide
 
 What Was Completed (Week 8 So Far):
@@ -1254,13 +1284,16 @@ What Was Completed (Week 8 So Far):
 - ✅ Updated IntegrationCard.tsx with n8n badge
 - ✅ Updated EnableIntegrationModal.tsx with validation UI
 - ✅ Added iKhokha payment integration (validator + migration)
+- ✅ Fixed missing required_fields (012_fix_integration_setup_instructions.sql)
+- ✅ Added credential update support for existing integrations
+- ✅ All changes pushed to GitHub (commit 2642d09)
 
 Remaining Week 8 Tasks:
 1. End-to-end testing with real credentials
 2. Production deployment verification
 3. Documentation updates
 
-Read PHASE2_WEEK8.1_GUIDE.md for comprehensive handover! 🚀
+Read PHASE2_WEEK8.2_GUIDE.md for comprehensive handover! 🚀
 ```
 
 ---

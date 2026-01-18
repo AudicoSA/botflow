@@ -112,6 +112,7 @@ Row-Level Security (RLS) is enabled for multi-tenancy.
 - `/api/bots/*` - Bot CRUD operations
 - `/api/bots/:id/knowledge` - Knowledge base per bot
 - `/api/integrations/*` - Google Sheets OAuth and integrations
+- `/api/marketplace/*` - Integration marketplace (see Marketplace section below)
 - `/api/conversations/*` - Conversation management
 - `/webhooks/*` - Incoming webhooks from Bird/Twilio
 
@@ -149,6 +150,8 @@ Optional (feature-dependent):
 - `/dashboard/conversations` - Message inbox
 - `/dashboard/analytics` - Analytics and metrics
 - `/dashboard/integrations` - Google Sheets OAuth flow
+- `/dashboard/marketplace` - Integration marketplace with enable/disable
+- `/dashboard/templates` - Bot template selection
 
 ## Template System
 
@@ -525,6 +528,102 @@ npm run test
 - Bird API is the primary WhatsApp provider, Twilio is secondary
 - All credentials are stored encrypted in database
 - 24-hour message window applies to WhatsApp conversations (service messages are free)
+
+## Integration Marketplace
+
+The Integration Marketplace allows users to connect their bots with third-party services like payment gateways, e-commerce platforms, shipping providers, and more.
+
+### Database Schema
+
+- `integration_marketplace` - Available integrations with setup instructions
+- `bot_integrations` - Enabled integrations per bot with encrypted credentials
+- `integration_logs` - Sync and error logs for debugging
+
+### Marketplace API Endpoints
+
+**Public Endpoints (no auth required):**
+- `GET /api/marketplace` - List all integrations (supports pagination, filtering)
+- `GET /api/marketplace/:slug` - Get specific integration details
+- `GET /api/marketplace/categories` - Get all categories with counts
+- `GET /api/marketplace/stats` - Get marketplace statistics
+- `GET /api/marketplace/search?q=query` - Search integrations
+
+**Authenticated Endpoints:**
+- `POST /api/marketplace/:slug/validate-credentials` - Test credentials before saving
+- `POST /api/marketplace/:slug/enable` - Enable integration for a bot
+- `PATCH /api/marketplace/bot-integrations/:id` - Update credentials/config
+- `DELETE /api/marketplace/bot-integrations/:id` - Disable integration
+- `GET /api/marketplace/bots/:botId/integrations` - Get bot's enabled integrations
+- `GET /api/marketplace/bot-integrations/:id` - Get specific bot integration
+- `GET /api/marketplace/bot-integrations/:id/logs` - Get integration logs
+- `GET /api/marketplace/recommended/:botId` - Get recommended integrations
+
+### Credential Validation
+
+The `credential-validator.service.ts` validates credentials for supported integrations:
+
+| Integration | Slug | Validation Method |
+|-------------|------|-------------------|
+| PayFast | `payfast` | Format validation (merchant_id, merchant_key) |
+| Paystack | `paystack` | API test (balance check) + format fallback |
+| Yoco | `yoco` | API test (business info) + format fallback |
+| iKhokha | `ikhokha` | Format validation (application_id, application_secret) |
+| Shopify | `shopify` | API test (shop info) + format validation |
+| WooCommerce | `woocommerce` | API test (system status) + format validation |
+| The Courier Guy | `courier-guy` | API test (login) + format fallback |
+| ShipLogic | `shiplogic` | API test (rates) + format fallback |
+| iCal Sync | `ical-sync` | Fetch and validate iCal format |
+| Clickatell | `clickatell` | API test (balance) + format fallback |
+| BulkSMS | `bulksms` | API test (profile) + format fallback |
+
+### Key Files
+
+- `botflow-backend/src/routes/marketplace.ts` - API route handlers
+- `botflow-backend/src/services/integration-marketplace.service.ts` - Business logic
+- `botflow-backend/src/services/credential-validator.service.ts` - Credential validation
+- `botflow-backend/src/services/n8n-marketplace.service.ts` - n8n dynamic integrations
+- `botflow-website/app/components/EnableIntegrationModal.tsx` - Enable/update modal
+- `botflow-website/app/components/ValidationResult.tsx` - Validation result display
+- `botflow-website/app/dashboard/marketplace/page.tsx` - Marketplace page
+
+### Frontend Components
+
+- **IntegrationCard** - Displays integration with icon, description, n8n badge
+- **EnableIntegrationModal** - Modal for enabling/updating integrations
+- **ValidationResult** - Shows credential validation status
+- **N8nBadge** - Badge for n8n-powered integrations
+
+### Example: Enable Integration
+
+```bash
+# 1. Validate credentials first
+curl -X POST http://localhost:3001/api/marketplace/payfast/validate-credentials \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"credentials": {"merchant_id": "10000100", "merchant_key": "46f0cd694581a"}}'
+
+# 2. Enable the integration
+curl -X POST http://localhost:3001/api/marketplace/payfast/enable \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"bot_id": "uuid", "credentials": {"merchant_id": "10000100", "merchant_key": "46f0cd694581a"}}'
+
+# 3. Update credentials later
+curl -X PATCH http://localhost:3001/api/marketplace/bot-integrations/:id \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"credentials": {"merchant_id": "10000100", "merchant_key": "new-key"}}'
+```
+
+### South African Integrations
+
+The marketplace includes SA-specific integrations:
+- **Payment:** PayFast, Paystack, Yoco, iKhokha
+- **Shipping:** The Courier Guy, ShipLogic
+- **Food Delivery:** Uber Eats SA, Mr D Food
+- **SMS:** Clickatell, BulkSMS
+
+---
 
 ## Project Status
 
