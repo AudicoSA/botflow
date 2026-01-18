@@ -3,6 +3,32 @@
 -- Created: 2026-01-18
 
 -- =============================================================================
+-- FIRST: Update the category check constraint to allow new categories
+-- =============================================================================
+
+-- Drop the existing check constraint
+ALTER TABLE integration_marketplace DROP CONSTRAINT IF EXISTS integration_marketplace_category_check;
+
+-- Add new check constraint with additional categories
+ALTER TABLE integration_marketplace
+ADD CONSTRAINT integration_marketplace_category_check
+CHECK (category IN (
+  'calendar',
+  'payment',
+  'crm',
+  'communication',
+  'ecommerce',
+  'analytics',
+  'productivity',
+  'specialized',
+  'marketing',
+  'shipping',
+  'database',
+  'ai',
+  'automation'
+));
+
+-- =============================================================================
 -- ADDITIONAL CRM INTEGRATIONS
 -- =============================================================================
 
@@ -393,7 +419,7 @@ INSERT INTO integration_marketplace (
  'African payment gateway',
  'Payment processing for African businesses with support for multiple payment methods.',
  'https://www.peachpayments.com/favicon.ico',
- true, 'api_key', 'transaction_fee', false, true,
+ true, 'api_key', 'paid', false, true,
  ARRAY['ecommerce', 'retail', 'all'],
  ARRAY['card_payments', 'eft', 'mobile_money', 'subscriptions'],
  'custom', 75,
@@ -404,7 +430,7 @@ INSERT INTO integration_marketplace (
  'Instant EFT payments',
  'Instant bank payments for South African businesses. Lower fees than cards.',
  'https://www.ozow.com/favicon.ico',
- true, 'api_key', 'transaction_fee', true, true,
+ true, 'api_key', 'paid', true, true,
  ARRAY['ecommerce', 'retail', 'all'],
  ARRAY['instant_eft', 'pay_by_link', 'refunds'],
  'custom', 78,
@@ -415,7 +441,7 @@ INSERT INTO integration_marketplace (
  'QR code payments',
  'Accept payments via QR code scanning. Popular in SA retail.',
  'https://www.snapscan.co.za/favicon.ico',
- true, 'api_key', 'transaction_fee', false, true,
+ true, 'api_key', 'paid', false, true,
  ARRAY['retail', 'restaurant'],
  ARRAY['qr_payments', 'payment_requests', 'refunds'],
  'custom', 72,
@@ -426,7 +452,7 @@ INSERT INTO integration_marketplace (
  'Smart locker delivery network',
  'Click & collect network across South Africa.',
  'https://pargo.co.za/favicon.ico',
- true, 'api_key', 'per_shipment', false, true,
+ true, 'api_key', 'paid', false, true,
  ARRAY['ecommerce', 'retail'],
  ARRAY['pickup_points', 'shipments', 'tracking', 'returns'],
  'custom', 68,
@@ -437,7 +463,7 @@ INSERT INTO integration_marketplace (
  'Multi-courier shipping platform',
  'Compare rates and ship with multiple SA couriers.',
  'https://www.bobgo.co.za/favicon.ico',
- true, 'api_key', 'per_shipment', false, true,
+ true, 'api_key', 'paid', false, true,
  ARRAY['ecommerce', 'retail'],
  ARRAY['rate_comparison', 'bookings', 'tracking', 'labels'],
  'custom', 65,
@@ -518,7 +544,7 @@ INSERT INTO integration_marketplace (
  'Advanced AI assistant',
  'Access Claude AI for intelligent conversations and analysis.',
  'https://www.anthropic.com/favicon.ico',
- true, 'api_key', 'usage_based', true, true,
+ true, 'api_key', 'paid', true, true,
  ARRAY['all'],
  ARRAY['chat', 'analysis', 'summarization', 'coding'],
  'custom', 90,
@@ -529,7 +555,7 @@ INSERT INTO integration_marketplace (
  'Run AI models in the cloud',
  'Access thousands of AI models including image generation and LLMs.',
  'https://replicate.com/favicon.ico',
- true, 'api_key', 'usage_based', false, true,
+ true, 'api_key', 'paid', false, true,
  ARRAY['all'],
  ARRAY['image_generation', 'text_generation', 'audio', 'video'],
  'custom', 75,
