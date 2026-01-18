@@ -916,12 +916,18 @@ export default async function knowledgeRoutes(fastify: FastifyInstance) {
                     })
                     .eq('id', article.id);
 
-                // Scrape and process URL asynchronously using setImmediate to ensure it runs
-                setImmediate(() => {
-                    processUrlSource(article.id, botId, normalizedContent, fastify.log).catch(error => {
-                        fastify.log.error({ error: error.message, articleId: article.id }, 'URL processing failed in background');
-                    });
-                });
+                // Process URL in background - fire and forget with proper error handling
+                // Using an IIFE to ensure the async function runs completely independent of the request
+                (async () => {
+                    try {
+                        fastify.log.info({ articleId: article.id }, 'Background URL processing started');
+                        await processUrlSource(article.id, botId, normalizedContent, fastify.log);
+                        fastify.log.info({ articleId: article.id }, 'Background URL processing completed');
+                    } catch (error: any) {
+                        fastify.log.error({ error: error.message, articleId: article.id }, 'Background URL processing failed');
+                        // Error is already handled inside processUrlSource, this is just extra safety
+                    }
+                })();
             }
 
             return {
