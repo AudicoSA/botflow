@@ -254,7 +254,7 @@ export default async function botRoutes(fastify: FastifyInstance) {
     fastify.patch('/:id', {
         onRequest: [fastify.authenticate],
     }, async (request, reply) => {
-        let userId = (request.user as any)?.id;
+        let userId = (request.user as any)?.userId || (request.user as any)?.id;
 
         if (!userId) {
             try {
@@ -268,13 +268,38 @@ export default async function botRoutes(fastify: FastifyInstance) {
         }
 
         const { id } = request.params as { id: string };
-        const { systemPrompt, modelConfig, ...otherUpdates } = request.body as any;
+        const { systemPrompt, modelConfig, workflow, ...otherUpdates } = request.body as any;
 
-        const dbUpdates = {
-            ...otherUpdates,
-            ...(systemPrompt !== undefined && { system_prompt: systemPrompt }),
-            ...(modelConfig !== undefined && { model_config: modelConfig }),
-        };
+        // Build database updates, mapping camelCase to snake_case where needed
+        const dbUpdates: Record<string, unknown> = {};
+
+        // Handle workflow - it's a JSONB column
+        if (workflow !== undefined) {
+            dbUpdates.workflow = workflow;
+        }
+
+        // Handle other known fields with proper mapping
+        if (systemPrompt !== undefined) {
+            dbUpdates.system_prompt = systemPrompt;
+        }
+        if (modelConfig !== undefined) {
+            dbUpdates.model_config = modelConfig;
+        }
+
+        // Handle remaining allowed fields
+        const allowedFields = ['name', 'description', 'config', 'status', 'vertical'];
+        for (const field of allowedFields) {
+            if (otherUpdates[field] !== undefined) {
+                dbUpdates[field] = otherUpdates[field];
+            }
+        }
+
+        // Don't allow empty updates
+        if (Object.keys(dbUpdates).length === 0) {
+            return reply.code(400).send({ error: 'No valid fields to update' });
+        }
+
+        fastify.log.info({ id, fields: Object.keys(dbUpdates) }, 'Updating bot');
 
         const { data: bot, error } = await supabaseAdmin
             .from('bots')
@@ -285,8 +310,8 @@ export default async function botRoutes(fastify: FastifyInstance) {
             .single();
 
         if (error) {
-            fastify.log.error(error);
-            return reply.code(500).send({ error: 'Failed to update bot' });
+            fastify.log.error({ error, id, fields: Object.keys(dbUpdates) }, 'Failed to update bot');
+            return reply.code(500).send({ error: 'Failed to update bot', details: error.message });
         }
 
         return { bot };
