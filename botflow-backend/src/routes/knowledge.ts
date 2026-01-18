@@ -946,6 +946,83 @@ export default async function knowledgeRoutes(fastify: FastifyInstance) {
     });
 
     // ============================================
+    // Debug: Reprocess failed source (for testing)
+    // ============================================
+
+    /**
+     * POST /bots/:botId/knowledge/:articleId/reprocess
+     * Reprocess a failed or pending knowledge source
+     */
+    fastify.post('/bots/:botId/knowledge/:articleId/reprocess', {
+        onRequest: [fastify.authenticate],
+    }, async (request, reply) => {
+        const { botId, articleId } = request.params as { botId: string, articleId: string };
+
+        try {
+            const userId = await getUserId(request, fastify);
+
+            // Verify ownership
+            const hasAccess = await verifyBotOwnership(botId, userId);
+            if (!hasAccess) {
+                return reply.code(403).send({ error: 'Unauthorized' });
+            }
+
+            // Get article
+            const { data: article, error: articleError } = await supabaseAdmin
+                .from('knowledge_base_articles')
+                .select('*')
+                .eq('id', articleId)
+                .eq('bot_id', botId)
+                .single();
+
+            if (articleError || !article) {
+                return reply.code(404).send({ error: 'Article not found' });
+            }
+
+            const url = article.metadata?.url;
+            if (!url) {
+                return reply.code(400).send({ error: 'Article has no URL to reprocess' });
+            }
+
+            fastify.log.info({ articleId, url }, 'Reprocessing URL source');
+
+            // Update status to processing
+            await supabaseAdmin
+                .from('knowledge_base_articles')
+                .update({
+                    metadata: {
+                        ...article.metadata,
+                        status: 'processing',
+                        reprocess_started: new Date().toISOString()
+                    }
+                })
+                .eq('id', articleId);
+
+            // Delete existing embeddings
+            await supabaseAdmin
+                .from('knowledge_embeddings')
+                .delete()
+                .eq('source_id', articleId);
+
+            // Reprocess
+            (async () => {
+                try {
+                    fastify.log.info({ articleId }, 'Reprocess background task started');
+                    await processUrlSource(articleId, botId, url, fastify.log);
+                    fastify.log.info({ articleId }, 'Reprocess background task completed');
+                } catch (error: any) {
+                    fastify.log.error({ error: error.message, articleId }, 'Reprocess background task failed');
+                }
+            })();
+
+            return { status: 'reprocessing', articleId };
+        } catch (error: any) {
+            fastify.log.error(error);
+            return reply.code(500).send({ error: error.message || 'Internal server error' });
+        }
+    });
+
+    // ============================================
     // Legacy Routes (for backward compatibility)
     // ============================================
 

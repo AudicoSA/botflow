@@ -147,42 +147,22 @@ export default function KnowledgeBaseTab({ botId }: KnowledgeBaseTabProps) {
             return;
         }
 
-        // Get URL from metadata
-        const url = source.metadata?.url;
-        if (!url) {
-            alert('Cannot retry: no URL found for this source');
-            return;
-        }
-
         setRetrying(source.id);
 
         try {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-            // First delete the failed source
-            await fetch(`${apiUrl}/api/bots/${botId}/knowledge/${source.id}`, {
-                method: 'DELETE',
+            // Use the reprocess endpoint to retry in place
+            const res = await fetch(`${apiUrl}/api/bots/${botId}/knowledge/${source.id}/reprocess`, {
+                method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
 
-            // Re-add it
-            const res = await fetch(`${apiUrl}/api/bots/${botId}/knowledge/source`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    source_type: 'url',
-                    content: url,
-                    title: url
-                })
-            });
-
             if (res.ok) {
-                fetchSources();
+                // Wait a moment then refresh to show "processing" status
+                setTimeout(() => fetchSources(), 500);
             } else {
                 const errorData = await res.json().catch(() => ({}));
                 alert(errorData.error || 'Failed to retry');

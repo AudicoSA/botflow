@@ -45,7 +45,8 @@
       "Bash(npx n8n-mcp --version)",
       "Bash(npm search:*)",
       "Bash(npx vercel@latest:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(xargs:*)"
     ],
     "additionalDirectories": [
       "\\tmp"
