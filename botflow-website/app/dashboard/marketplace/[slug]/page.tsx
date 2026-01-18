@@ -22,6 +22,18 @@ interface Integration {
   supported_features: string[];
   setup_instructions?: any;
   documentation_url?: string;
+  credential_schema?: {
+    type: string;
+    required?: string[];
+    properties?: Record<string, {
+      type: string;
+      title?: string;
+      description?: string;
+      placeholder?: string;
+      default?: any;
+      format?: string;
+    }>;
+  };
 }
 
 export default function IntegrationDetailPage() {

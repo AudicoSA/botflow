@@ -19,6 +19,18 @@ interface Integration {
     required_fields?: string[];
     required_scopes?: string[];
   };
+  credential_schema?: {
+    type: string;
+    required?: string[];
+    properties?: Record<string, {
+      type: string;
+      title?: string;
+      description?: string;
+      placeholder?: string;
+      default?: any;
+      format?: string;
+    }>;
+  };
 }
 
 interface ValidationResultType {
@@ -107,9 +119,31 @@ export function EnableIntegrationModal({ integration, onClose, onSuccess }: Enab
     }
   };
 
-  // Get required fields from setup instructions
-  const requiredFields = integration.setup_instructions?.required_fields || [];
+  // Get required fields - prefer credential_schema if available
+  const hasCredentialSchema = !!integration.credential_schema?.properties;
+  const schemaProperties = integration.credential_schema?.properties || {};
+  const schemaRequired = integration.credential_schema?.required || [];
+
+  // Get field names - either from credential_schema or setup_instructions
+  const requiredFields = hasCredentialSchema
+    ? Object.keys(schemaProperties)
+    : (integration.setup_instructions?.required_fields || []);
   const steps = integration.setup_instructions?.steps || [];
+
+  // Initialize default values from credential_schema
+  useEffect(() => {
+    if (hasCredentialSchema && Object.keys(credentials).length === 0) {
+      const defaults: Record<string, string> = {};
+      for (const [key, field] of Object.entries(schemaProperties)) {
+        if (field.default !== undefined) {
+          defaults[key] = String(field.default);
+        }
+      }
+      if (Object.keys(defaults).length > 0) {
+        setCredentials(defaults);
+      }
+    }
+  }, [hasCredentialSchema]);
 
   const handleInputChange = (field: string, value: string) => {
     setCredentials(prev => ({ ...prev, [field]: value }));
@@ -217,7 +251,9 @@ export function EnableIntegrationModal({ integration, onClose, onSuccess }: Enab
   const isFormValid = () => {
     if (!selectedBotId) return false;
     if (!integration.requires_auth) return true;
-    return requiredFields.every(field => credentials[field]?.trim());
+    // Check only required fields from schema, or all fields if using legacy setup_instructions
+    const fieldsToCheck = hasCredentialSchema ? schemaRequired : requiredFields;
+    return fieldsToCheck.every(field => credentials[field]?.trim());
   };
 
   return (
@@ -333,30 +369,61 @@ export function EnableIntegrationModal({ integration, onClose, onSuccess }: Enab
             {/* Credentials Form */}
             {integration.requires_auth && requiredFields.length > 0 && (
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-gray-700">Credentials:</h4>
-                {requiredFields.map((field) => (
-                  <div key={field}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
-                      {field.replace(/_/g, ' ')}
-                    </label>
-                    <input
-                      type={field.includes('secret') || field.includes('key') || field.includes('token') ? 'password' : 'text'}
-                      value={credentials[field] || ''}
-                      onChange={(e) => handleInputChange(field, e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder={`Enter ${field.replace(/_/g, ' ')}`}
-                    />
-                  </div>
-                ))}
+                <h4 className="text-sm font-semibold text-gray-700">
+                  {integration.auth_type === 'database' ? 'Database Connection:' : 'Credentials:'}
+                </h4>
+                {requiredFields.map((field) => {
+                  const fieldSchema = schemaProperties[field];
+                  const fieldTitle = fieldSchema?.title || field.replace(/_/g, ' ');
+                  const fieldDescription = fieldSchema?.description;
+                  const fieldPlaceholder = fieldSchema?.placeholder || `Enter ${fieldTitle.toLowerCase()}`;
+                  const isPassword = fieldSchema?.format === 'password' ||
+                    field.includes('secret') || field.includes('key') ||
+                    field.includes('token') || field.includes('password');
+                  const isNumber = fieldSchema?.type === 'number';
+                  const isBoolean = fieldSchema?.type === 'boolean';
+                  const isRequired = schemaRequired.includes(field);
+
+                  return (
+                    <div key={field}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {fieldTitle}
+                        {isRequired && <span className="text-red-500 ml-1">*</span>}
+                      </label>
+                      {fieldDescription && (
+                        <p className="text-xs text-gray-500 mb-1">{fieldDescription}</p>
+                      )}
+                      {isBoolean ? (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={credentials[field] === 'true'}
+                            onChange={(e) => handleInputChange(field, e.target.checked ? 'true' : 'false')}
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-600">Enable</span>
+                        </label>
+                      ) : (
+                        <input
+                          type={isPassword ? 'password' : isNumber ? 'number' : 'text'}
+                          value={credentials[field] || ''}
+                          onChange={(e) => handleInputChange(field, e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder={fieldPlaceholder}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
 
                 {/* Test Credentials Button */}
                 <div className="pt-2">
                   <button
                     type="button"
                     onClick={handleValidateCredentials}
-                    disabled={isValidating || !requiredFields.every(field => credentials[field]?.trim())}
+                    disabled={isValidating || !(hasCredentialSchema ? schemaRequired : requiredFields).every(field => credentials[field]?.trim())}
                     className={`w-full px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                      isValidating || !requiredFields.every(field => credentials[field]?.trim())
+                      isValidating || !(hasCredentialSchema ? schemaRequired : requiredFields).every(field => credentials[field]?.trim())
                         ? 'border-gray-300 text-gray-400 cursor-not-allowed'
                         : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                     }`}
@@ -396,6 +463,23 @@ export function EnableIntegrationModal({ integration, onClose, onSuccess }: Enab
                     <p className="text-sm font-medium text-orange-800">Powered by n8n</p>
                     <p className="text-sm text-orange-700 mt-1">
                       This integration runs through n8n workflow automation, giving you advanced customization options.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Database Integration Info */}
+            {integration.auth_type === 'database' && (
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <div className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-medium text-purple-800">Direct Database Connection</p>
+                    <p className="text-sm text-purple-700 mt-1">
+                      This integration connects directly to your database for real-time data sync. Make sure your database allows remote connections.
                     </p>
                   </div>
                 </div>

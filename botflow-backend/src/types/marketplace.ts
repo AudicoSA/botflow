@@ -8,9 +8,14 @@ export type IntegrationCategory =
   | 'ecommerce'
   | 'analytics'
   | 'productivity'
-  | 'specialized';
+  | 'specialized'
+  | 'marketing'
+  | 'shipping'
+  | 'database'
+  | 'ai'
+  | 'automation';
 
-export type AuthType = 'oauth' | 'api_key' | 'basic' | 'none';
+export type AuthType = 'oauth' | 'api_key' | 'basic' | 'database' | 'none';
 
 export type PricingModel = 'free' | 'freemium' | 'paid';
 
@@ -26,6 +31,21 @@ export interface SetupInstructions {
   required_scopes?: string[];
   optional_fields?: string[];
   help_url?: string;
+}
+
+export interface CredentialSchemaProperty {
+  type: string;
+  title?: string;
+  description?: string;
+  placeholder?: string;
+  default?: any;
+  format?: string;
+}
+
+export interface CredentialSchema {
+  type: string;
+  required?: string[];
+  properties?: Record<string, CredentialSchemaProperty>;
 }
 
 export interface Integration {
@@ -46,6 +66,7 @@ export interface Integration {
   is_direct_integration: boolean;
   documentation_url?: string;
   setup_instructions?: SetupInstructions;
+  credential_schema?: CredentialSchema;
   webhook_url?: string;
   supported_features: string[];
   created_at: string;

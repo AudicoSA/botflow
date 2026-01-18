@@ -22,6 +22,18 @@ interface Integration {
   recommended_for_verticals: string[];
   supported_features: string[];
   setup_instructions?: any;
+  credential_schema?: {
+    type: string;
+    required?: string[];
+    properties?: Record<string, {
+      type: string;
+      title?: string;
+      description?: string;
+      placeholder?: string;
+      default?: any;
+      format?: string;
+    }>;
+  };
 }
 
 const categories = [
