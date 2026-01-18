@@ -110,7 +110,7 @@ export default function MarketplacePage() {
             Integration Marketplace
           </h1>
           <p className="text-gray-600">
-            Connect your WhatsApp bot to 400+ apps and services. Choose from pre-configured integrations or build custom workflows.
+            Connect your WhatsApp bot to 130+ apps and services. Choose from pre-configured integrations or build custom workflows.
           </p>
         </div>
 
