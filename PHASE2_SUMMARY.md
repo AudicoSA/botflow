@@ -1,14 +1,86 @@
 # Phase 2: Intelligent Bot Factory - Complete Progress Summary
 
 **Last Updated:** 2026-01-18
-**Current Status:** Week 1-7 Complete! Week 8 In Progress (~70%)
-**Overall Phase 2 Progress:** 98% (Week 8: Frontend Integration & Production Testing)
+**Current Status:** Week 1-7 Complete! Week 8 In Progress (~85%)
+**Overall Phase 2 Progress:** 97% (Week 8: Frontend Integration & Production Testing)
 
 ---
 
-## 🆕 Latest Update: Week 8 Session 2 (2026-01-18) ✅
+## 🆕 Latest Update: Week 8 Session 4 (2026-01-18) ✅
 
-### What We Completed Today (Session 2)
+### What We Completed Today (Session 4)
+
+**Marketplace Expansion ✅**
+
+- Expanded from 31 to 70+ integrations
+- Added South African integrations: Ozow, Peach Payments, SnapScan, Pargo, Bob Go
+- Added AI integrations: Anthropic Claude, Replicate, Hugging Face
+- Fixed category constraint (added: marketing, shipping, database, ai, automation)
+- Fixed pricing_model constraint
+
+**OpenCart Database Integration ✅**
+
+- Added OpenCart with direct MySQL database connection support
+- Created `credential_schema` JSONB column for dynamic form generation
+- Supports: db_host, db_port, db_name, db_user, db_password, table_prefix, ssl_enabled
+
+**Dynamic Credential Forms ✅**
+
+- Updated `EnableIntegrationModal.tsx` to render fields from `credential_schema`
+- Proper field titles, descriptions, placeholders from JSON schema
+- Support for: text, number, password, boolean (checkbox) input types
+- Required field indicators (*)
+- Default value initialization
+- Special "Database Connection" section for database-type integrations
+
+**Documentation Created ✅**
+
+- `PHASE3_PLAN.md` - Comprehensive AI Workflow Agent plan (4-6 weeks)
+- `PHASE2_WEEK8.4_GUIDE.md` - Remaining Phase 2 tasks checklist
+
+**All Changes Pushed to GitHub ✅**
+
+- Commit: `0b0e8bc` - credential_schema support
+- Migrations: `015_add_more_integrations.sql`, `016_add_opencart_integration.sql`
+
+### Files Created/Modified (Session 4)
+
+**Backend:**
+- `src/types/marketplace.ts` - Added CredentialSchema types, new categories
+- `migrations/015_add_more_integrations.sql` - 40+ new integrations
+- `migrations/016_add_opencart_integration.sql` - OpenCart with credential_schema
+
+**Frontend:**
+- `app/components/EnableIntegrationModal.tsx` - Dynamic credential form rendering
+- `app/dashboard/marketplace/page.tsx` - Updated Integration interface
+- `app/dashboard/marketplace/[slug]/page.tsx` - Updated Integration interface
+
+**Documentation:**
+- `PHASE3_PLAN.md` - AI Workflow Agent plan
+- `PHASE2_WEEK8.4_GUIDE.md` - Remaining tasks
+
+---
+
+## Previous Update: Week 8 Session 3 (2026-01-18) ✅
+
+### What We Completed (Session 3)
+
+**Knowledge Base Fixes ✅**
+
+- Fixed auth headers for URL and text source processing
+- Knowledge base can now process URLs and plain text (not just PDFs)
+
+**Workflow Builder Fixes ✅**
+
+- Added `workflow` JSONB column to bots table (`014_add_workflow_column.sql`)
+- Fixed PATCH endpoint in `bots.ts` to handle workflow saves
+- Workflow builder can now save visual workflows to database
+
+---
+
+## Previous Update: Week 8 Session 2 (2026-01-18) ✅
+
+### What We Completed (Session 2)
 
 **Fixed Missing Credential Fields ✅**
 
@@ -22,26 +94,6 @@
 - Auto-detects when integration is already enabled for selected bot
 - Shows "Update" mode with blue info banner
 - Uses PATCH endpoint to update credentials
-
-**All Changes Pushed to GitHub ✅**
-
-- Commit: `2642d09`
-- 19 files changed, 4518 insertions
-- Deployments triggered (Vercel + Railway)
-
-### Files Created/Modified (Session 2)
-
-**Modified Frontend:**
-
-- `EnableIntegrationModal.tsx` - Added update mode with auto-detection
-
-**New Migrations:**
-
-- `012_fix_integration_setup_instructions.sql` - Fix required_fields for 11 integrations
-
-**Documentation:**
-
-- `PHASE2_WEEK8.2_GUIDE.md` - Session 2 handover
 
 ---
 

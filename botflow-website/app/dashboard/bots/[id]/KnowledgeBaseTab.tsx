@@ -16,6 +16,7 @@ interface KnowledgeSource {
         url?: string;
         status?: string;
         chunks_created?: number;
+        error_message?: string;
         [key: string]: unknown;
     };
     created_at: string;
@@ -351,6 +352,13 @@ export default function KnowledgeBaseTab({ botId }: KnowledgeBaseTabProps) {
                                                 {' • '}
                                                 {new Date(source.created_at).toLocaleDateString()}
                                             </span>
+                                            {status === 'failed' && source.metadata?.error_message && (
+                                                <span className="text-xs text-red-500 mt-1" title={source.metadata.error_message}>
+                                                    Error: {source.metadata.error_message.length > 80
+                                                        ? source.metadata.error_message.substring(0, 80) + '...'
+                                                        : source.metadata.error_message}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     <button

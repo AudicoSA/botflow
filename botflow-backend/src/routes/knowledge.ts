@@ -174,25 +174,79 @@ async function processUrlSource(articleId: string, botId: string, url: string, l
             })
             .eq('id', articleId);
 
-        // Fetch the URL content
-        const response = await fetch(url, {
-            headers: {
-                'User-Agent': 'BotFlow Knowledge Bot/1.0',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        // Fetch the URL content with better headers to avoid blocks
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+        let response;
+        try {
+            response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache',
+                    'Sec-Fetch-Dest': 'document',
+                    'Sec-Fetch-Mode': 'navigate',
+                    'Sec-Fetch-Site': 'none',
+                    'Sec-Fetch-User': '?1',
+                    'Upgrade-Insecure-Requests': '1'
+                },
+                signal: controller.signal,
+                redirect: 'follow'
+            });
+        } catch (fetchError: any) {
+            clearTimeout(timeoutId);
+            if (fetchError.name === 'AbortError') {
+                throw new Error('Request timeout: Website took too long to respond (30s limit)');
             }
-        });
+            if (fetchError.cause?.code === 'ENOTFOUND') {
+                throw new Error(`DNS lookup failed: Could not find website "${new URL(url).hostname}"`);
+            }
+            if (fetchError.cause?.code === 'ECONNREFUSED') {
+                throw new Error('Connection refused: Website server is not accepting connections');
+            }
+            if (fetchError.cause?.code === 'CERT_HAS_EXPIRED' || fetchError.message?.includes('certificate')) {
+                throw new Error('SSL certificate error: Website has an invalid or expired certificate');
+            }
+            throw new Error(`Network error: ${fetchError.message || 'Failed to connect to website'}`);
+        }
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
-            throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+            if (response.status === 403) {
+                throw new Error(`Access denied (403): Website is blocking automated access`);
+            }
+            if (response.status === 404) {
+                throw new Error(`Page not found (404): The URL does not exist`);
+            }
+            if (response.status === 500 || response.status === 502 || response.status === 503) {
+                throw new Error(`Server error (${response.status}): Website is having issues`);
+            }
+            throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('text/html') && !contentType.includes('text/plain') && !contentType.includes('application/xhtml')) {
+            log.warn({ contentType, url }, 'Non-HTML content type, attempting to process anyway');
         }
 
         const html = await response.text();
+        log.info({ articleId, htmlLength: html.length }, 'URL content fetched');
+
+        if (!html || html.length < 100) {
+            throw new Error('Website returned empty or very short content');
+        }
 
         // Simple HTML to text conversion (strip tags, decode entities)
         const textContent = extractTextFromHtml(html);
 
+        log.info({ articleId, textLength: textContent.length }, 'Text extracted from HTML');
+
         if (!textContent || textContent.length < 50) {
-            throw new Error('Could not extract meaningful content from URL');
+            throw new Error('Could not extract meaningful text content from the page (too short or no readable text found)');
         }
 
         // Update article with extracted content
@@ -206,10 +260,10 @@ async function processUrlSource(articleId: string, botId: string, url: string, l
         // Process the text content
         await processTextSource(articleId, botId, textContent, log);
 
-    } catch (error) {
-        log.error({ error, articleId, url }, 'URL source processing failed');
+    } catch (error: any) {
+        log.error({ error: error.message, stack: error.stack, articleId, url }, 'URL source processing failed');
 
-        // Update status to failed
+        // Update status to failed with detailed error message
         await supabaseAdmin
             .from('knowledge_base_articles')
             .update({
@@ -217,6 +271,7 @@ async function processUrlSource(articleId: string, botId: string, url: string, l
                     status: 'failed',
                     url,
                     error_message: error instanceof Error ? error.message : 'Unknown error',
+                    error_type: error.name || 'Error',
                     processing_completed: new Date().toISOString()
                 }
             })
