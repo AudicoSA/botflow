@@ -6,8 +6,32 @@ interface KnowledgeBaseTabProps {
     botId: string;
 }
 
+interface KnowledgeSource {
+    id: string;
+    title: string;
+    category: string;
+    metadata: {
+        source_type?: string;
+        file_name?: string;
+        url?: string;
+        status?: string;
+        chunks_created?: number;
+        [key: string]: unknown;
+    };
+    created_at: string;
+    chunk_count?: number;
+}
+
+// Helper to get auth token
+const getAuthToken = () => {
+    if (typeof window !== 'undefined') {
+        return localStorage.getItem('botflow_token');
+    }
+    return null;
+};
+
 export default function KnowledgeBaseTab({ botId }: KnowledgeBaseTabProps) {
-    const [sources, setSources] = useState<any[]>([]);
+    const [sources, setSources] = useState<KnowledgeSource[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [inputValue, setInputValue] = useState('');
@@ -15,11 +39,22 @@ export default function KnowledgeBaseTab({ botId }: KnowledgeBaseTabProps) {
 
     const fetchSources = useCallback(async () => {
         try {
+            const token = getAuthToken();
+            if (!token) {
+                setLoading(false);
+                return;
+            }
+
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-            const res = await fetch(`${apiUrl}/api/bots/${botId}/knowledge`);
+            const res = await fetch(`${apiUrl}/api/bots/${botId}/knowledge`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
             if (res.ok) {
                 const data = await res.json();
-                setSources(data.sources);
+                // Backend returns { articles: [...] }
+                setSources(data.articles || data.sources || []);
             }
         } catch (error) {
             console.error('Failed to fetch sources:', error);
@@ -33,17 +68,30 @@ export default function KnowledgeBaseTab({ botId }: KnowledgeBaseTabProps) {
     }, [fetchSources]);
 
     const handleAddSource = async () => {
-        if (!inputValue) return;
+        if (!inputValue.trim()) return;
+
+        const token = getAuthToken();
+        if (!token) {
+            alert('Please login to continue');
+            return;
+        }
+
         setUploading(true);
+
         try {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-            const res = await fetch(`${apiUrl}/api/bots/${botId}/knowledge`, {
+
+            // Use the source endpoint for URL and text
+            const res = await fetch(`${apiUrl}/api/bots/${botId}/knowledge/source`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
-                    sourceType: inputType,
-                    content: inputValue,
-                    metadata: { addedAt: new Date().toISOString() }
+                    source_type: inputType,
+                    content: inputValue.trim(),
+                    title: inputType === 'url' ? inputValue.trim() : `Text added ${new Date().toLocaleDateString()}`
                 })
             });
 
@@ -51,10 +99,12 @@ export default function KnowledgeBaseTab({ botId }: KnowledgeBaseTabProps) {
                 setInputValue('');
                 fetchSources();
             } else {
-                alert('Failed to add source');
+                const errorData = await res.json().catch(() => ({}));
+                alert(errorData.error || 'Failed to add source');
             }
         } catch (error) {
             console.error('Error adding source:', error);
+            alert('Failed to add source');
         } finally {
             setUploading(false);
         }
@@ -62,10 +112,20 @@ export default function KnowledgeBaseTab({ botId }: KnowledgeBaseTabProps) {
 
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to remove this source?')) return;
+
+        const token = getAuthToken();
+        if (!token) {
+            alert('Please login to continue');
+            return;
+        }
+
         try {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
             const res = await fetch(`${apiUrl}/api/bots/${botId}/knowledge/${id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
             });
 
             if (res.ok) {
@@ -82,33 +142,111 @@ export default function KnowledgeBaseTab({ botId }: KnowledgeBaseTabProps) {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // For MVP, we read file as text. In future, use FormData for binary.
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-            const text = event.target?.result as string;
-            setUploading(true);
-            try {
-                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-                const res = await fetch(`${apiUrl}/api/bots/${botId}/knowledge`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        sourceType: 'file',
-                        content: text, // Storing raw text for now
-                        metadata: { filename: file.name, size: file.size, type: file.type }
-                    })
-                });
+        const token = getAuthToken();
+        if (!token) {
+            alert('Please login to continue');
+            return;
+        }
 
-                if (res.ok) {
-                    fetchSources();
-                } else {
-                    alert('Failed to upload file');
+        // Check file size (10MB max)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('File size must be less than 10MB');
+            return;
+        }
+
+        setUploading(true);
+        try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+            // Determine file type
+            let fileType = file.type;
+            if (!fileType || fileType === '') {
+                if (file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+                    fileType = 'text/plain';
+                } else if (file.name.endsWith('.pdf')) {
+                    fileType = 'application/pdf';
+                } else if (file.name.endsWith('.docx')) {
+                    fileType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
                 }
-            } finally {
-                setUploading(false);
             }
-        };
-        reader.readAsText(file);
+
+            // Step 1: Initialize upload to get signed URL
+            const initRes = await fetch(`${apiUrl}/api/bots/${botId}/knowledge`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    file_name: file.name,
+                    file_size: file.size,
+                    file_type: fileType
+                })
+            });
+
+            if (!initRes.ok) {
+                const errorData = await initRes.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to initialize upload');
+            }
+
+            const { article_id, upload_url } = await initRes.json();
+
+            // Step 2: Upload file to Supabase Storage using signed URL
+            const uploadRes = await fetch(upload_url, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': fileType
+                },
+                body: file
+            });
+
+            if (!uploadRes.ok) {
+                throw new Error('Failed to upload file to storage');
+            }
+
+            // Step 3: Trigger processing
+            const processRes = await fetch(`${apiUrl}/api/bots/${botId}/knowledge/${article_id}/process`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!processRes.ok) {
+                console.warn('Processing trigger failed, but file was uploaded');
+            }
+
+            fetchSources();
+            // Reset file input
+            e.target.value = '';
+        } catch (err: unknown) {
+            console.error('Error uploading file:', err);
+            alert(err instanceof Error ? err.message : 'Failed to upload file');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    // Helper to get source type from metadata or category
+    const getSourceType = (source: KnowledgeSource): string => {
+        if (source.metadata?.source_type) return source.metadata.source_type;
+        if (source.category === 'uploaded_document') return 'file';
+        if (source.category === 'website') return 'url';
+        if (source.category === 'manual_text') return 'text';
+        return source.category || 'unknown';
+    };
+
+    // Helper to get display title
+    const getDisplayTitle = (source: KnowledgeSource): string => {
+        if (source.metadata?.file_name) return source.metadata.file_name;
+        if (source.metadata?.url) return source.metadata.url;
+        if (source.title) return source.title.length > 50 ? source.title.substring(0, 50) + '...' : source.title;
+        return 'Unknown source';
+    };
+
+    // Helper to get status
+    const getStatus = (source: KnowledgeSource): string => {
+        return source.metadata?.status || 'pending';
     };
 
     return (
@@ -117,7 +255,7 @@ export default function KnowledgeBaseTab({ botId }: KnowledgeBaseTabProps) {
             <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                 <h3 className="font-bold text-gray-900 mb-4 border-b pb-2">Add Knowledge</h3>
 
-                <div className="flex gap-4 mb-4">
+                <div className="flex flex-wrap gap-4 mb-4">
                     <button
                         onClick={() => setInputType('url')}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${inputType === 'url' ? 'bg-primary-blue text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
@@ -130,9 +268,15 @@ export default function KnowledgeBaseTab({ botId }: KnowledgeBaseTabProps) {
                     >
                         Raw Text
                     </button>
-                    <label className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer">
-                        Upload File
-                        <input type="file" className="hidden" onChange={handleFileUpload} accept=".txt,.md,.csv,.json" />
+                    <label className={`px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        {uploading ? 'Uploading...' : 'Upload File'}
+                        <input
+                            type="file"
+                            className="hidden"
+                            onChange={handleFileUpload}
+                            accept=".txt,.md,.pdf,.docx"
+                            disabled={uploading}
+                        />
                     </label>
                 </div>
 
@@ -141,7 +285,7 @@ export default function KnowledgeBaseTab({ botId }: KnowledgeBaseTabProps) {
                         <input
                             type="url"
                             placeholder="https://example.com/pricing"
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-blue focus:border-transparent"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                         />
@@ -149,19 +293,23 @@ export default function KnowledgeBaseTab({ botId }: KnowledgeBaseTabProps) {
                     {inputType === 'text' && (
                         <textarea
                             placeholder="Paste your FAQ or policy text here..."
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg min-h-[80px]"
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg min-h-[80px] focus:ring-2 focus:ring-primary-blue focus:border-transparent"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                         />
                     )}
                     <button
                         onClick={handleAddSource}
-                        disabled={uploading || !inputValue}
-                        className="px-6 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50"
+                        disabled={uploading || !inputValue.trim()}
+                        className="px-6 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {uploading ? 'Adding...' : 'Add'}
                     </button>
                 </div>
+
+                <p className="text-xs text-gray-500 mt-3">
+                    Supported: Website URLs, plain text, PDF, TXT, MD, DOCX files (max 10MB)
+                </p>
             </div>
 
             {/* List Sources */}
@@ -173,36 +321,50 @@ export default function KnowledgeBaseTab({ botId }: KnowledgeBaseTabProps) {
                     <div className="text-center py-8 text-gray-500">No knowledge sources added yet.</div>
                 ) : (
                     <div className="space-y-3">
-                        {sources.map((source) => (
-                            <div key={source.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                <div className="flex items-center gap-3 overflow-hidden">
-                                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${source.source_type === 'url' ? 'bg-blue-100 text-blue-700' :
-                                            source.source_type === 'file' ? 'bg-orange-100 text-orange-700' : 'bg-gray-200 text-gray-700'
-                                        }`}>
-                                        {source.source_type}
-                                    </span>
-                                    <div className="flex flex-col min-w-0">
-                                        <span className="font-medium text-gray-900 truncate" title={source.content}>
-                                            {source.metadata?.filename || source.content.substring(0, 50) + (source.content.length > 50 ? '...' : '')}
+                        {sources.map((source) => {
+                            const sourceType = getSourceType(source);
+                            const status = getStatus(source);
+                            return (
+                                <div key={source.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                    <div className="flex items-center gap-3 overflow-hidden">
+                                        <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${sourceType === 'url' ? 'bg-blue-100 text-blue-700' :
+                                            sourceType === 'file' ? 'bg-orange-100 text-orange-700' :
+                                                sourceType === 'text' ? 'bg-purple-100 text-purple-700' :
+                                                    'bg-gray-200 text-gray-700'
+                                            }`}>
+                                            {sourceType}
                                         </span>
-                                        <span className="text-xs text-gray-500">
-                                            Status: <span className={source.status === 'indexed' ? 'text-green-600' : 'text-yellow-600'}>{source.status}</span>
-                                            {' • '}
-                                            {new Date(source.created_at).toLocaleDateString()}
-                                        </span>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="font-medium text-gray-900 truncate" title={source.title}>
+                                                {getDisplayTitle(source)}
+                                            </span>
+                                            <span className="text-xs text-gray-500">
+                                                Status: <span className={
+                                                    status === 'indexed' ? 'text-green-600' :
+                                                        status === 'processing' ? 'text-blue-600' :
+                                                            status === 'failed' ? 'text-red-600' :
+                                                                'text-yellow-600'
+                                                }>{status}</span>
+                                                {source.chunk_count !== undefined && source.chunk_count > 0 && (
+                                                    <span className="ml-2 text-gray-400">({source.chunk_count} chunks)</span>
+                                                )}
+                                                {' • '}
+                                                {new Date(source.created_at).toLocaleDateString()}
+                                            </span>
+                                        </div>
                                     </div>
+                                    <button
+                                        onClick={() => handleDelete(source.id)}
+                                        className="text-red-500 hover:text-red-700 p-2 flex-shrink-0"
+                                        title="Remove source"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => handleDelete(source.id)}
-                                    className="text-red-500 hover:text-red-700 p-2"
-                                    title="Remove source"
-                                >
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                </button>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>

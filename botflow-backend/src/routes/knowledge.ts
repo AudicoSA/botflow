@@ -51,6 +51,241 @@ function generateWebhookSignature(payload: any): string {
 }
 
 /**
+ * Process text source - chunk and generate embeddings
+ */
+async function processTextSource(articleId: string, botId: string, content: string, log: any): Promise<void> {
+    try {
+        log.info({ articleId, botId, contentLength: content.length }, 'Starting text source processing');
+
+        // Update status to processing
+        await supabaseAdmin
+            .from('knowledge_base_articles')
+            .update({
+                metadata: {
+                    status: 'processing',
+                    processing_started: new Date().toISOString()
+                }
+            })
+            .eq('id', articleId);
+
+        // Simple chunking: split by paragraphs, then by sentences if too long
+        const chunks = chunkText(content, 1000, 100); // 1000 chars per chunk, 100 char overlap
+
+        log.info({ articleId, chunkCount: chunks.length }, 'Text chunked');
+
+        // Generate embeddings for each chunk
+        let successCount = 0;
+        for (let i = 0; i < chunks.length; i++) {
+            const chunk = chunks[i];
+
+            try {
+                // Generate embedding via OpenAI
+                const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'text-embedding-3-small',
+                        input: chunk
+                    })
+                });
+
+                if (!embeddingResponse.ok) {
+                    log.error({ status: embeddingResponse.status }, 'OpenAI embedding failed');
+                    continue;
+                }
+
+                const embedData = await embeddingResponse.json() as { data: Array<{ embedding: number[] }> };
+                const embedding = embedData.data[0].embedding;
+
+                // Store embedding in database
+                const { error: embedError } = await supabaseAdmin
+                    .from('knowledge_embeddings')
+                    .insert({
+                        source_id: articleId,
+                        bot_id: botId,
+                        chunk_text: chunk,
+                        chunk_index: i,
+                        embedding: embedding,
+                        metadata: {
+                            chunk_size: chunk.length,
+                            model: 'text-embedding-3-small'
+                        }
+                    });
+
+                if (embedError) {
+                    log.error({ embedError, chunkIndex: i }, 'Failed to store embedding');
+                } else {
+                    successCount++;
+                }
+            } catch (chunkError) {
+                log.error({ chunkError, chunkIndex: i }, 'Failed to process chunk');
+            }
+        }
+
+        // Update article status
+        await supabaseAdmin
+            .from('knowledge_base_articles')
+            .update({
+                metadata: {
+                    status: successCount > 0 ? 'indexed' : 'failed',
+                    chunks_created: successCount,
+                    processing_completed: new Date().toISOString()
+                }
+            })
+            .eq('id', articleId);
+
+        log.info({ articleId, successCount, totalChunks: chunks.length }, 'Text source processing completed');
+    } catch (error) {
+        log.error({ error, articleId }, 'Text source processing failed');
+
+        // Update status to failed
+        await supabaseAdmin
+            .from('knowledge_base_articles')
+            .update({
+                metadata: {
+                    status: 'failed',
+                    error_message: error instanceof Error ? error.message : 'Unknown error',
+                    processing_completed: new Date().toISOString()
+                }
+            })
+            .eq('id', articleId);
+    }
+}
+
+/**
+ * Process URL source - fetch, scrape, and generate embeddings
+ */
+async function processUrlSource(articleId: string, botId: string, url: string, log: any): Promise<void> {
+    try {
+        log.info({ articleId, botId, url }, 'Starting URL source processing');
+
+        // Update status to processing
+        await supabaseAdmin
+            .from('knowledge_base_articles')
+            .update({
+                metadata: {
+                    status: 'processing',
+                    url,
+                    processing_started: new Date().toISOString()
+                }
+            })
+            .eq('id', articleId);
+
+        // Fetch the URL content
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'BotFlow Knowledge Bot/1.0',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+        }
+
+        const html = await response.text();
+
+        // Simple HTML to text conversion (strip tags, decode entities)
+        const textContent = extractTextFromHtml(html);
+
+        if (!textContent || textContent.length < 50) {
+            throw new Error('Could not extract meaningful content from URL');
+        }
+
+        // Update article with extracted content
+        await supabaseAdmin
+            .from('knowledge_base_articles')
+            .update({
+                content: textContent.substring(0, 50000) // Limit to 50k chars
+            })
+            .eq('id', articleId);
+
+        // Process the text content
+        await processTextSource(articleId, botId, textContent, log);
+
+    } catch (error) {
+        log.error({ error, articleId, url }, 'URL source processing failed');
+
+        // Update status to failed
+        await supabaseAdmin
+            .from('knowledge_base_articles')
+            .update({
+                metadata: {
+                    status: 'failed',
+                    url,
+                    error_message: error instanceof Error ? error.message : 'Unknown error',
+                    processing_completed: new Date().toISOString()
+                }
+            })
+            .eq('id', articleId);
+    }
+}
+
+/**
+ * Simple text chunking with overlap
+ */
+function chunkText(text: string, chunkSize: number, overlap: number): string[] {
+    const chunks: string[] = [];
+    const sentences = text.split(/(?<=[.!?])\s+/);
+    let currentChunk = '';
+
+    for (const sentence of sentences) {
+        if ((currentChunk + ' ' + sentence).length > chunkSize && currentChunk.length > 0) {
+            chunks.push(currentChunk.trim());
+            // Keep last part for overlap
+            const words = currentChunk.split(' ');
+            const overlapWords = Math.ceil(overlap / 5); // Roughly 5 chars per word
+            currentChunk = words.slice(-overlapWords).join(' ') + ' ' + sentence;
+        } else {
+            currentChunk = currentChunk ? currentChunk + ' ' + sentence : sentence;
+        }
+    }
+
+    if (currentChunk.trim()) {
+        chunks.push(currentChunk.trim());
+    }
+
+    return chunks.length > 0 ? chunks : [text];
+}
+
+/**
+ * Extract text content from HTML
+ */
+function extractTextFromHtml(html: string): string {
+    // Remove script and style tags with their content
+    let text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+    text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+    text = text.replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '');
+
+    // Remove HTML comments
+    text = text.replace(/<!--[\s\S]*?-->/g, '');
+
+    // Replace common block elements with newlines
+    text = text.replace(/<\/(p|div|h[1-6]|li|tr|br)[^>]*>/gi, '\n');
+
+    // Remove all remaining HTML tags
+    text = text.replace(/<[^>]+>/g, ' ');
+
+    // Decode common HTML entities
+    text = text.replace(/&nbsp;/g, ' ');
+    text = text.replace(/&amp;/g, '&');
+    text = text.replace(/&lt;/g, '<');
+    text = text.replace(/&gt;/g, '>');
+    text = text.replace(/&quot;/g, '"');
+    text = text.replace(/&#39;/g, "'");
+
+    // Clean up whitespace
+    text = text.replace(/\s+/g, ' ');
+    text = text.replace(/\n\s+/g, '\n');
+    text = text.replace(/\n+/g, '\n');
+
+    return text.trim();
+}
+
+/**
  * Verify user owns the bot (via organization membership)
  */
 async function verifyBotOwnership(botId: string, userId: string): Promise<boolean> {
@@ -458,7 +693,7 @@ export default async function knowledgeRoutes(fastify: FastifyInstance) {
                 return reply.code(500).send({ error: 'Failed to generate query embedding' });
             }
 
-            const embedData = await openaiResponse.json();
+            const embedData = await openaiResponse.json() as { data: Array<{ embedding: number[] }> };
             const queryEmbedding = embedData.data[0].embedding;
 
             // Search knowledge base using PostgreSQL function
@@ -532,6 +767,113 @@ export default async function knowledgeRoutes(fastify: FastifyInstance) {
             }
 
             return { success: true };
+        } catch (error: any) {
+            fastify.log.error(error);
+            return reply.code(500).send({ error: error.message || 'Internal server error' });
+        }
+    });
+
+    // ============================================
+    // URL and Text Sources (Simple Knowledge)
+    // ============================================
+
+    /**
+     * POST /bots/:botId/knowledge/source
+     * Add a URL or text-based knowledge source
+     * These are processed immediately (no file upload needed)
+     */
+    fastify.post('/bots/:botId/knowledge/source', {
+        onRequest: [fastify.authenticate],
+    }, async (request, reply) => {
+        const { botId } = request.params as { botId: string };
+
+        try {
+            const userId = await getUserId(request, fastify);
+
+            // Verify ownership
+            const hasAccess = await verifyBotOwnership(botId, userId);
+            if (!hasAccess) {
+                return reply.code(403).send({ error: 'Unauthorized' });
+            }
+
+            const { source_type, content, title } = request.body as {
+                source_type: 'url' | 'text';
+                content: string;
+                title?: string;
+            };
+
+            if (!source_type || !content) {
+                return reply.code(400).send({ error: 'source_type and content are required' });
+            }
+
+            if (!['url', 'text'].includes(source_type)) {
+                return reply.code(400).send({ error: 'source_type must be "url" or "text"' });
+            }
+
+            // Validate and normalize URL format if it's a URL source
+            let normalizedContent = content;
+            if (source_type === 'url') {
+                // Add https:// if no protocol specified
+                if (!content.startsWith('http://') && !content.startsWith('https://')) {
+                    normalizedContent = 'https://' + content;
+                }
+                try {
+                    new URL(normalizedContent);
+                } catch {
+                    return reply.code(400).send({ error: 'Invalid URL format' });
+                }
+            }
+
+            // Create knowledge_base_articles record
+            const category = source_type === 'url' ? 'website' : 'manual_text';
+            const { data: article, error: articleError } = await supabaseAdmin
+                .from('knowledge_base_articles')
+                .insert({
+                    bot_id: botId,
+                    title: title || normalizedContent.substring(0, 100),
+                    content: source_type === 'text' ? normalizedContent : '', // Store text content directly
+                    category: category,
+                    metadata: {
+                        source_type,
+                        url: source_type === 'url' ? normalizedContent : undefined,
+                        status: 'pending',
+                        added_by: userId,
+                        added_at: new Date().toISOString()
+                    }
+                })
+                .select()
+                .single();
+
+            if (articleError) {
+                fastify.log.error(articleError, 'Failed to create article record');
+                return reply.code(500).send({ error: 'Failed to create knowledge source' });
+            }
+
+            // For text sources, generate embeddings immediately
+            if (source_type === 'text' && normalizedContent.length > 0) {
+                // Process text asynchronously
+                processTextSource(article.id, botId, normalizedContent, fastify.log).catch(error => {
+                    fastify.log.error({ error, articleId: article.id }, 'Text processing failed');
+                });
+            }
+
+            // For URL sources, scrape and process
+            if (source_type === 'url') {
+                // Scrape and process URL asynchronously
+                processUrlSource(article.id, botId, normalizedContent, fastify.log).catch(error => {
+                    fastify.log.error({ error, articleId: article.id }, 'URL processing failed');
+                });
+            }
+
+            return {
+                article: {
+                    id: article.id,
+                    title: article.title,
+                    category: article.category,
+                    metadata: article.metadata,
+                    created_at: article.created_at
+                }
+            };
         } catch (error: any) {
             fastify.log.error(error);
             return reply.code(500).send({ error: error.message || 'Internal server error' });
