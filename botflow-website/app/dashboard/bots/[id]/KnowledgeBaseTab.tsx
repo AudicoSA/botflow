@@ -35,6 +35,7 @@ export default function KnowledgeBaseTab({ botId }: KnowledgeBaseTabProps) {
     const [sources, setSources] = useState<KnowledgeSource[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
+    const [retrying, setRetrying] = useState<string | null>(null);
     const [inputValue, setInputValue] = useState('');
     const [inputType, setInputType] = useState<'url' | 'text'>('url');
 
@@ -136,6 +137,61 @@ export default function KnowledgeBaseTab({ botId }: KnowledgeBaseTabProps) {
             }
         } catch (error) {
             console.error('Error deleting source:', error);
+        }
+    };
+
+    const handleRetry = async (source: KnowledgeSource) => {
+        const token = getAuthToken();
+        if (!token) {
+            alert('Please login to continue');
+            return;
+        }
+
+        // Get URL from metadata
+        const url = source.metadata?.url;
+        if (!url) {
+            alert('Cannot retry: no URL found for this source');
+            return;
+        }
+
+        setRetrying(source.id);
+
+        try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+            // First delete the failed source
+            await fetch(`${apiUrl}/api/bots/${botId}/knowledge/${source.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            // Re-add it
+            const res = await fetch(`${apiUrl}/api/bots/${botId}/knowledge/source`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    source_type: 'url',
+                    content: url,
+                    title: url
+                })
+            });
+
+            if (res.ok) {
+                fetchSources();
+            } else {
+                const errorData = await res.json().catch(() => ({}));
+                alert(errorData.error || 'Failed to retry');
+            }
+        } catch (error) {
+            console.error('Error retrying source:', error);
+            alert('Failed to retry');
+        } finally {
+            setRetrying(null);
         }
     };
 
@@ -361,15 +417,36 @@ export default function KnowledgeBaseTab({ botId }: KnowledgeBaseTabProps) {
                                             )}
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={() => handleDelete(source.id)}
-                                        className="text-red-500 hover:text-red-700 p-2 flex-shrink-0"
-                                        title="Remove source"
-                                    >
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                        {status === 'failed' && source.metadata?.url && (
+                                            <button
+                                                onClick={() => handleRetry(source)}
+                                                disabled={retrying === source.id}
+                                                className="text-blue-500 hover:text-blue-700 p-2 disabled:opacity-50"
+                                                title="Retry processing"
+                                            >
+                                                {retrying === source.id ? (
+                                                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                ) : (
+                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    </svg>
+                                                )}
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => handleDelete(source.id)}
+                                            className="text-red-500 hover:text-red-700 p-2"
+                                            title="Remove source"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             );
                         })}
