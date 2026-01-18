@@ -56,7 +56,7 @@ CREATE INDEX IF NOT EXISTS idx_workflow_templates_popularity ON workflow_templat
 CREATE TABLE IF NOT EXISTS workflow_template_usage (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   template_id UUID REFERENCES workflow_templates(id) ON DELETE SET NULL,
-  bot_id UUID REFERENCES bots(id) ON DELETE CASCADE,
+  bot_id TEXT REFERENCES bots(id) ON DELETE CASCADE,
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
 
   -- Customizations applied during instantiation
