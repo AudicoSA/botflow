@@ -1,0 +1,123 @@
+{
+  "slug": "stock-inquiry",
+  "name": "Product Stock Inquiry",
+  "category": "ecommerce",
+  "description": "Let customers check product availability and get notified when items are back in stock.",
+  "icon": "box",
+  "trigger_phrases": [
+    "check stock",
+    "in stock",
+    "available",
+    "do you have",
+    "is it available",
+    "product availability",
+    "stock check"
+  ],
+  "keywords": ["stock", "inventory", "available", "product", "check"],
+  "required_integrations": [],
+  "vertical": "ecommerce",
+  "blueprint": {
+    "name": "Stock Inquiry",
+    "description": "Checks product availability",
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "trigger",
+        "data": {
+          "label": "Message Received",
+          "triggerType": "message_received"
+        },
+        "position": { "x": 250, "y": 50 }
+      },
+      {
+        "id": "condition-1",
+        "type": "condition",
+        "data": {
+          "label": "Stock Inquiry?",
+          "conditionType": "intent_match",
+          "intent": "stock_inquiry",
+          "keywords": ["stock", "available", "have", "availability"]
+        },
+        "position": { "x": 250, "y": 150 }
+      },
+      {
+        "id": "action-1",
+        "type": "action",
+        "data": {
+          "label": "Extract Product",
+          "actionType": "extract_entity",
+          "entityType": "product_name",
+          "promptIfMissing": "Which product would you like to check? Please share the product name or code."
+        },
+        "position": { "x": 250, "y": 250 }
+      },
+      {
+        "id": "action-2",
+        "type": "action",
+        "data": {
+          "label": "Search Knowledge Base",
+          "actionType": "knowledge_search",
+          "query": "{{extracted.product_name}} stock availability"
+        },
+        "position": { "x": 250, "y": 350 }
+      },
+      {
+        "id": "condition-2",
+        "type": "condition",
+        "data": {
+          "label": "Found Info?",
+          "conditionType": "data_check",
+          "field": "knowledge.results",
+          "operator": "not_empty"
+        },
+        "position": { "x": 250, "y": 450 }
+      },
+      {
+        "id": "action-3",
+        "type": "action",
+        "data": {
+          "label": "Stock Available",
+          "actionType": "send_message",
+          "message": "✅ Great news! *{{extracted.product_name}}* is in stock.\n\nPrice: R{{product_price}}\n\nWould you like to:\n1. Place an order\n2. Get more details\n3. Check another product"
+        },
+        "position": { "x": 100, "y": 550 }
+      },
+      {
+        "id": "action-4",
+        "type": "action",
+        "data": {
+          "label": "Not Found",
+          "actionType": "send_message",
+          "message": "I couldn't find that product. Here are some options:\n\n1. Try a different spelling\n2. Browse our catalog: {{catalog_url}}\n3. Speak to our team\n\nWhat would you like to do?"
+        },
+        "position": { "x": 400, "y": 550 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "trigger-1", "target": "condition-1" },
+      { "id": "e2", "source": "condition-1", "target": "action-1", "sourceHandle": "yes" },
+      { "id": "e3", "source": "action-1", "target": "action-2" },
+      { "id": "e4", "source": "action-2", "target": "condition-2" },
+      { "id": "e5", "source": "condition-2", "target": "action-3", "sourceHandle": "yes" },
+      { "id": "e6", "source": "condition-2", "target": "action-4", "sourceHandle": "no" }
+    ]
+  },
+  "variables": [
+    {
+      "name": "catalog_url",
+      "type": "string",
+      "label": "Catalog URL",
+      "description": "Link to your product catalog or website",
+      "required": true
+    }
+  ],
+  "configurable_fields": [
+    {
+      "key": "notify_on_restock",
+      "type": "boolean",
+      "label": "Back-in-Stock Notifications",
+      "description": "Offer to notify customers when items are restocked",
+      "defaultValue": true
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "slug": "appointment-reminder",
+  "name": "Appointment Reminder",
+  "category": "notification",
+  "description": "Automatically send appointment reminders 24 hours before scheduled appointments.",
+  "icon": "bell",
+  "trigger_phrases": [
+    "appointment reminder",
+    "booking reminder",
+    "reminder notification",
+    "upcoming appointment"
+  ],
+  "keywords": ["reminder", "appointment", "booking", "upcoming", "notify", "alert"],
+  "required_integrations": [],
+  "vertical": null,
+  "blueprint": {
+    "name": "Appointment Reminder",
+    "description": "Sends reminders before appointments",
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "trigger",
+        "data": {
+          "label": "Scheduled Trigger",
+          "triggerType": "schedule",
+          "schedule": "0 9 * * *",
+          "description": "Runs daily at 9am to check upcoming appointments"
+        },
+        "position": { "x": 250, "y": 50 }
+      },
+      {
+        "id": "action-1",
+        "type": "action",
+        "data": {
+          "label": "Get Tomorrow's Appointments",
+          "actionType": "query_records",
+          "recordType": "appointments",
+          "query": {
+            "date": "{{tomorrow}}",
+            "status": "confirmed"
+          }
+        },
+        "position": { "x": 250, "y": 150 }
+      },
+      {
+        "id": "condition-1",
+        "type": "condition",
+        "data": {
+          "label": "Has Appointments?",
+          "conditionType": "data_check",
+          "field": "records.appointments",
+          "operator": "not_empty"
+        },
+        "position": { "x": 250, "y": 250 }
+      },
+      {
+        "id": "action-2",
+        "type": "action",
+        "data": {
+          "label": "Loop Through Appointments",
+          "actionType": "loop",
+          "items": "{{records.appointments}}",
+          "itemVariable": "appointment"
+        },
+        "position": { "x": 250, "y": 350 }
+      },
+      {
+        "id": "action-3",
+        "type": "action",
+        "data": {
+          "label": "Send Reminder",
+          "actionType": "send_whatsapp",
+          "to": "{{appointment.customer_phone}}",
+          "message": "⏰ *Appointment Reminder*\n\nHi {{appointment.customer_name}},\n\nThis is a reminder about your appointment tomorrow:\n\n📅 Date: {{appointment.date}}\n🕐 Time: {{appointment.time}}\n📋 Service: {{appointment.service}}\n\n📍 Location: {{business_address}}\n\n*Need to reschedule?*\nReply 'reschedule' or call us at {{business_phone}}\n\nWe look forward to seeing you!"
+        },
+        "position": { "x": 250, "y": 450 }
+      },
+      {
+        "id": "action-4",
+        "type": "action",
+        "data": {
+          "label": "Mark Reminder Sent",
+          "actionType": "update_record",
+          "recordType": "appointments",
+          "recordId": "{{appointment.id}}",
+          "data": {
+            "reminder_sent": true,
+            "reminder_sent_at": "{{now}}"
+          }
+        },
+        "position": { "x": 250, "y": 550 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "trigger-1", "target": "action-1" },
+      { "id": "e2", "source": "action-1", "target": "condition-1" },
+      { "id": "e3", "source": "condition-1", "target": "action-2", "sourceHandle": "yes" },
+      { "id": "e4", "source": "action-2", "target": "action-3" },
+      { "id": "e5", "source": "action-3", "target": "action-4" }
+    ]
+  },
+  "variables": [
+    {
+      "name": "business_address",
+      "type": "string",
+      "label": "Business Address",
+      "description": "Address to include in reminder",
+      "required": true
+    },
+    {
+      "name": "business_phone",
+      "type": "string",
+      "label": "Business Phone",
+      "description": "Phone number for rescheduling",
+      "required": true
+    }
+  ],
+  "configurable_fields": [
+    {
+      "key": "reminder_hours",
+      "type": "select",
+      "label": "Reminder Timing",
+      "description": "How many hours before appointment to send reminder",
+      "options": [
+        { "value": "12", "label": "12 hours before" },
+        { "value": "24", "label": "24 hours before" },
+        { "value": "48", "label": "48 hours before" }
+      ],
+      "defaultValue": "24"
+    },
+    {
+      "key": "allow_reschedule",
+      "type": "boolean",
+      "label": "Allow Rescheduling",
+      "description": "Let customers reschedule via WhatsApp reply",
+      "defaultValue": true
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "slug": "availability-check",
+  "name": "Availability Check",
+  "category": "booking",
+  "description": "Let customers check available slots without booking. Perfect for initial inquiries.",
+  "icon": "clock",
+  "trigger_phrases": [
+    "check availability",
+    "when available",
+    "open slots",
+    "free times",
+    "available times",
+    "what times",
+    "opening hours"
+  ],
+  "keywords": ["availability", "available", "slots", "times", "open", "free", "hours"],
+  "required_integrations": [],
+  "vertical": null,
+  "blueprint": {
+    "name": "Availability Check",
+    "description": "Shows available appointment slots",
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "trigger",
+        "data": {
+          "label": "Message Received",
+          "triggerType": "message_received"
+        },
+        "position": { "x": 250, "y": 50 }
+      },
+      {
+        "id": "condition-1",
+        "type": "condition",
+        "data": {
+          "label": "Availability Check?",
+          "conditionType": "intent_match",
+          "intent": "check_availability"
+        },
+        "position": { "x": 250, "y": 150 }
+      },
+      {
+        "id": "action-1",
+        "type": "action",
+        "data": {
+          "label": "Get Date",
+          "actionType": "extract_entity",
+          "entityType": "date",
+          "promptIfMissing": "Which date would you like to check? (e.g., tomorrow, Monday, 15th January)"
+        },
+        "position": { "x": 250, "y": 250 }
+      },
+      {
+        "id": "action-2",
+        "type": "action",
+        "data": {
+          "label": "Fetch Availability",
+          "actionType": "check_calendar",
+          "calendarId": "{{calendar_id}}",
+          "date": "{{extracted.date}}"
+        },
+        "position": { "x": 250, "y": 350 }
+      },
+      {
+        "id": "condition-2",
+        "type": "condition",
+        "data": {
+          "label": "Has Slots?",
+          "conditionType": "data_check",
+          "field": "calendar.available_slots",
+          "operator": "not_empty"
+        },
+        "position": { "x": 250, "y": 450 }
+      },
+      {
+        "id": "action-3",
+        "type": "action",
+        "data": {
+          "label": "Show Available",
+          "actionType": "send_message",
+          "message": "📅 *Available times for {{extracted.date}}*\n\n{{#each calendar.available_slots}}\n• {{this}}\n{{/each}}\n\nWould you like to book one of these slots? Just reply 'book' and your preferred time."
+        },
+        "position": { "x": 100, "y": 550 }
+      },
+      {
+        "id": "action-4",
+        "type": "action",
+        "data": {
+          "label": "No Availability",
+          "actionType": "send_message",
+          "message": "Unfortunately, we don't have availability on {{extracted.date}}.\n\nWould you like me to:\n1. Check another date\n2. Show the next available slot\n3. Join our waiting list"
+        },
+        "position": { "x": 400, "y": 550 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "trigger-1", "target": "condition-1" },
+      { "id": "e2", "source": "condition-1", "target": "action-1", "sourceHandle": "yes" },
+      { "id": "e3", "source": "action-1", "target": "action-2" },
+      { "id": "e4", "source": "action-2", "target": "condition-2" },
+      { "id": "e5", "source": "condition-2", "target": "action-3", "sourceHandle": "yes" },
+      { "id": "e6", "source": "condition-2", "target": "action-4", "sourceHandle": "no" }
+    ]
+  },
+  "variables": [
+    {
+      "name": "business_hours",
+      "type": "string",
+      "label": "Business Hours",
+      "description": "Your regular business hours (e.g., Mon-Fri 9am-5pm)",
+      "required": true
+    }
+  ],
+  "configurable_fields": [
+    {
+      "key": "show_next_available",
+      "type": "boolean",
+      "label": "Show Next Available",
+      "description": "If no slots on requested date, show next available",
+      "defaultValue": true
+    }
+  ]
+}

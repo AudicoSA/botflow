@@ -1,0 +1,164 @@
+{
+  "slug": "faq-responder",
+  "name": "FAQ Responder",
+  "category": "support",
+  "description": "Automatically answer common questions using your knowledge base. Reduces support workload by handling FAQs.",
+  "icon": "help-circle",
+  "trigger_phrases": [
+    "question",
+    "help",
+    "how do i",
+    "what is",
+    "can you tell me",
+    "i need help",
+    "faq"
+  ],
+  "keywords": ["faq", "question", "help", "information", "how", "what", "support"],
+  "required_integrations": [],
+  "vertical": null,
+  "blueprint": {
+    "name": "FAQ Responder",
+    "description": "Answers questions from knowledge base",
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "trigger",
+        "data": {
+          "label": "Message Received",
+          "triggerType": "message_received"
+        },
+        "position": { "x": 250, "y": 50 }
+      },
+      {
+        "id": "condition-1",
+        "type": "condition",
+        "data": {
+          "label": "Is Question?",
+          "conditionType": "intent_match",
+          "intent": "question",
+          "keywords": ["?", "how", "what", "when", "where", "why", "can", "do you"]
+        },
+        "position": { "x": 250, "y": 150 }
+      },
+      {
+        "id": "action-1",
+        "type": "action",
+        "data": {
+          "label": "Search Knowledge Base",
+          "actionType": "knowledge_search",
+          "query": "{{message.text}}",
+          "threshold": 0.7,
+          "limit": 3
+        },
+        "position": { "x": 250, "y": 250 }
+      },
+      {
+        "id": "condition-2",
+        "type": "condition",
+        "data": {
+          "label": "Found Answer?",
+          "conditionType": "data_check",
+          "field": "knowledge.results",
+          "operator": "not_empty"
+        },
+        "position": { "x": 250, "y": 350 }
+      },
+      {
+        "id": "action-2",
+        "type": "action",
+        "data": {
+          "label": "AI Response",
+          "actionType": "ai_response",
+          "context": "{{knowledge.results}}",
+          "systemPrompt": "You are a helpful assistant for {{business_name}}. Answer the customer's question based on the provided context. Be friendly and concise. If you're not sure, say so and offer to connect them with support."
+        },
+        "position": { "x": 100, "y": 450 }
+      },
+      {
+        "id": "action-3",
+        "type": "action",
+        "data": {
+          "label": "No Answer Found",
+          "actionType": "send_message",
+          "message": "I don't have a ready answer for that, but I'd love to help!\n\nYou can:\n1. Rephrase your question\n2. Contact our team at {{support_contact}}\n3. Visit our help center: {{help_url}}\n\nWhat would you prefer?"
+        },
+        "position": { "x": 400, "y": 450 }
+      },
+      {
+        "id": "action-4",
+        "type": "action",
+        "data": {
+          "label": "Send Response",
+          "actionType": "send_message",
+          "message": "{{ai_response}}\n\n---\nWas this helpful? Reply 'yes' or 'no'"
+        },
+        "position": { "x": 100, "y": 550 }
+      },
+      {
+        "id": "action-5",
+        "type": "action",
+        "data": {
+          "label": "Fallback",
+          "actionType": "send_message",
+          "message": "Hi! I'm here to help answer your questions about {{business_name}}.\n\nYou can ask me about:\n{{faq_topics}}\n\nWhat would you like to know?"
+        },
+        "position": { "x": 450, "y": 150 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "trigger-1", "target": "condition-1" },
+      { "id": "e2", "source": "condition-1", "target": "action-1", "sourceHandle": "yes" },
+      { "id": "e3", "source": "condition-1", "target": "action-5", "sourceHandle": "no" },
+      { "id": "e4", "source": "action-1", "target": "condition-2" },
+      { "id": "e5", "source": "condition-2", "target": "action-2", "sourceHandle": "yes" },
+      { "id": "e6", "source": "condition-2", "target": "action-3", "sourceHandle": "no" },
+      { "id": "e7", "source": "action-2", "target": "action-4" }
+    ]
+  },
+  "variables": [
+    {
+      "name": "business_name",
+      "type": "string",
+      "label": "Business Name",
+      "description": "Your business name for personalized responses",
+      "required": true
+    },
+    {
+      "name": "support_contact",
+      "type": "string",
+      "label": "Support Contact",
+      "description": "Phone or email for human support",
+      "required": true
+    },
+    {
+      "name": "help_url",
+      "type": "string",
+      "label": "Help Center URL",
+      "description": "Link to your help center or FAQ page",
+      "required": false
+    },
+    {
+      "name": "faq_topics",
+      "type": "string",
+      "label": "FAQ Topics",
+      "description": "Main topics your FAQ covers (shown in menu)",
+      "required": true
+    }
+  ],
+  "configurable_fields": [
+    {
+      "key": "feedback_enabled",
+      "type": "boolean",
+      "label": "Collect Feedback",
+      "description": "Ask if the answer was helpful",
+      "defaultValue": true
+    },
+    {
+      "key": "escalation_enabled",
+      "type": "boolean",
+      "label": "Auto-Escalation",
+      "description": "Offer to connect with human agent if answer not found",
+      "defaultValue": true
+    }
+  ]
+}

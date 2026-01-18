@@ -25,7 +25,7 @@ import {
   ParsedIntent
 } from '../../types/ai-agent.js';
 import { Blueprint } from '../../types/workflow.js';
-import { CacheService, getCacheService } from '../cache.service.js';
+import { CacheService, cacheService } from '../cache.service.js';
 
 /**
  * Configuration for the Context Manager
@@ -70,9 +70,9 @@ export class ContextManager {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.startCleanup();
 
-    // Try to get cache service for Redis-backed sessions
+    // Try to use cache service for Redis-backed sessions
     try {
-      this.cache = getCacheService();
+      this.cache = cacheService;
     } catch {
       // Cache not available, use in-memory only
       console.log('Context Manager: Using in-memory session storage');

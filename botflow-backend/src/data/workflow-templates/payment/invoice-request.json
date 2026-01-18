@@ -1,0 +1,187 @@
+{
+  "slug": "invoice-request",
+  "name": "Invoice Request",
+  "category": "payment",
+  "description": "Let customers request invoices and receive them via WhatsApp or email.",
+  "icon": "file-text",
+  "trigger_phrases": [
+    "invoice",
+    "send invoice",
+    "request invoice",
+    "need invoice",
+    "invoice please",
+    "tax invoice",
+    "proof of payment"
+  ],
+  "keywords": ["invoice", "receipt", "tax", "proof", "payment", "document"],
+  "required_integrations": [],
+  "vertical": null,
+  "blueprint": {
+    "name": "Invoice Request",
+    "description": "Handles invoice requests",
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "trigger",
+        "data": {
+          "label": "Message Received",
+          "triggerType": "message_received"
+        },
+        "position": { "x": 250, "y": 50 }
+      },
+      {
+        "id": "condition-1",
+        "type": "condition",
+        "data": {
+          "label": "Invoice Request?",
+          "conditionType": "intent_match",
+          "intent": "invoice_request"
+        },
+        "position": { "x": 250, "y": 150 }
+      },
+      {
+        "id": "action-1",
+        "type": "action",
+        "data": {
+          "label": "Get Reference",
+          "actionType": "extract_entity",
+          "entityType": "reference",
+          "promptIfMissing": "Please provide your order number or transaction reference for the invoice."
+        },
+        "position": { "x": 250, "y": 250 }
+      },
+      {
+        "id": "action-2",
+        "type": "action",
+        "data": {
+          "label": "Get Email",
+          "actionType": "extract_entity",
+          "entityType": "email",
+          "promptIfMissing": "What email address should I send the invoice to?"
+        },
+        "position": { "x": 250, "y": 350 }
+      },
+      {
+        "id": "action-3",
+        "type": "action",
+        "data": {
+          "label": "Search Order",
+          "actionType": "search_record",
+          "recordType": "orders",
+          "query": "{{extracted.reference}}"
+        },
+        "position": { "x": 250, "y": 450 }
+      },
+      {
+        "id": "condition-2",
+        "type": "condition",
+        "data": {
+          "label": "Order Found?",
+          "conditionType": "data_check",
+          "field": "record.order",
+          "operator": "exists"
+        },
+        "position": { "x": 250, "y": 550 }
+      },
+      {
+        "id": "action-4",
+        "type": "action",
+        "data": {
+          "label": "Generate Invoice",
+          "actionType": "generate_document",
+          "documentType": "invoice",
+          "data": {
+            "order": "{{record.order}}",
+            "company": "{{company_name}}",
+            "vat_number": "{{vat_number}}",
+            "address": "{{company_address}}"
+          }
+        },
+        "position": { "x": 100, "y": 650 }
+      },
+      {
+        "id": "action-5",
+        "type": "action",
+        "data": {
+          "label": "Send Invoice",
+          "actionType": "send_notification",
+          "channel": "email",
+          "to": "{{extracted.email}}",
+          "subject": "Invoice from {{company_name}} - {{extracted.reference}}",
+          "attachment": "{{document.pdf_url}}"
+        },
+        "position": { "x": 100, "y": 750 }
+      },
+      {
+        "id": "action-6",
+        "type": "action",
+        "data": {
+          "label": "Confirm Sent",
+          "actionType": "send_message",
+          "message": "✅ Invoice sent!\n\nI've emailed your invoice for order {{extracted.reference}} to {{extracted.email}}.\n\nPlease check your spam folder if you don't see it within a few minutes."
+        },
+        "position": { "x": 100, "y": 850 }
+      },
+      {
+        "id": "action-7",
+        "type": "action",
+        "data": {
+          "label": "Not Found",
+          "actionType": "send_message",
+          "message": "I couldn't find an order with reference {{extracted.reference}}. Please check the number and try again, or contact us at {{support_email}} for assistance."
+        },
+        "position": { "x": 400, "y": 650 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "trigger-1", "target": "condition-1" },
+      { "id": "e2", "source": "condition-1", "target": "action-1", "sourceHandle": "yes" },
+      { "id": "e3", "source": "action-1", "target": "action-2" },
+      { "id": "e4", "source": "action-2", "target": "action-3" },
+      { "id": "e5", "source": "action-3", "target": "condition-2" },
+      { "id": "e6", "source": "condition-2", "target": "action-4", "sourceHandle": "yes" },
+      { "id": "e7", "source": "condition-2", "target": "action-7", "sourceHandle": "no" },
+      { "id": "e8", "source": "action-4", "target": "action-5" },
+      { "id": "e9", "source": "action-5", "target": "action-6" }
+    ]
+  },
+  "variables": [
+    {
+      "name": "company_name",
+      "type": "string",
+      "label": "Company Name",
+      "description": "Your registered company name for invoices",
+      "required": true
+    },
+    {
+      "name": "vat_number",
+      "type": "string",
+      "label": "VAT Number",
+      "description": "Your VAT registration number (if applicable)",
+      "required": false
+    },
+    {
+      "name": "company_address",
+      "type": "string",
+      "label": "Company Address",
+      "description": "Address to appear on invoice",
+      "required": true
+    },
+    {
+      "name": "support_email",
+      "type": "string",
+      "label": "Support Email",
+      "description": "Email for invoice queries",
+      "required": true
+    }
+  ],
+  "configurable_fields": [
+    {
+      "key": "include_vat",
+      "type": "boolean",
+      "label": "Include VAT Breakdown",
+      "description": "Show VAT separately on invoices",
+      "defaultValue": true
+    }
+  ]
+}

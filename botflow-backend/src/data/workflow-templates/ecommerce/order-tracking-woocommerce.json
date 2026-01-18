@@ -1,0 +1,132 @@
+{
+  "slug": "order-tracking-woocommerce",
+  "name": "WooCommerce Order Tracking",
+  "category": "ecommerce",
+  "description": "Allow customers to track their WooCommerce orders via WhatsApp. Works with any WooCommerce store.",
+  "icon": "package",
+  "trigger_phrases": [
+    "track order",
+    "where is my order",
+    "order status",
+    "track my package",
+    "delivery status",
+    "my order",
+    "check order"
+  ],
+  "keywords": ["order", "tracking", "woocommerce", "wordpress", "delivery", "status"],
+  "required_integrations": ["woocommerce"],
+  "vertical": "ecommerce",
+  "blueprint": {
+    "name": "WooCommerce Order Tracking",
+    "description": "Tracks orders via WooCommerce REST API",
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "trigger",
+        "data": {
+          "label": "WhatsApp Message",
+          "triggerType": "message_received"
+        },
+        "position": { "x": 250, "y": 50 }
+      },
+      {
+        "id": "condition-1",
+        "type": "condition",
+        "data": {
+          "label": "Track Order Intent?",
+          "conditionType": "intent_match",
+          "intent": "order_tracking"
+        },
+        "position": { "x": 250, "y": 150 }
+      },
+      {
+        "id": "action-1",
+        "type": "action",
+        "data": {
+          "label": "Get Order Number",
+          "actionType": "extract_entity",
+          "entityType": "order_number",
+          "promptIfMissing": "Please share your order number so I can check the status."
+        },
+        "position": { "x": 250, "y": 250 }
+      },
+      {
+        "id": "integration-1",
+        "type": "integration",
+        "data": {
+          "label": "Query WooCommerce",
+          "integration": "woocommerce",
+          "action": "get_order",
+          "inputs": {
+            "order_id": "{{extracted.order_number}}"
+          }
+        },
+        "position": { "x": 250, "y": 350 }
+      },
+      {
+        "id": "condition-2",
+        "type": "condition",
+        "data": {
+          "label": "Order Found?",
+          "conditionType": "data_check",
+          "field": "woocommerce.order.id",
+          "operator": "exists"
+        },
+        "position": { "x": 250, "y": 450 }
+      },
+      {
+        "id": "action-2",
+        "type": "action",
+        "data": {
+          "label": "Send Status",
+          "actionType": "send_message",
+          "message": "📦 *Order #{{woocommerce.order.id}}*\n\nStatus: {{woocommerce.order.status}}\nTotal: R{{woocommerce.order.total}}\n\n{{#if woocommerce.order.tracking_number}}Tracking: {{woocommerce.order.tracking_number}}{{/if}}\n\nNeed help? Reply with 'help' or call us."
+        },
+        "position": { "x": 150, "y": 550 }
+      },
+      {
+        "id": "action-3",
+        "type": "action",
+        "data": {
+          "label": "Not Found",
+          "actionType": "send_message",
+          "message": "I couldn't find order #{{extracted.order_number}}. Please double-check the number or contact us at {{support_phone}}."
+        },
+        "position": { "x": 350, "y": 550 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "trigger-1", "target": "condition-1" },
+      { "id": "e2", "source": "condition-1", "target": "action-1", "sourceHandle": "yes" },
+      { "id": "e3", "source": "action-1", "target": "integration-1" },
+      { "id": "e4", "source": "integration-1", "target": "condition-2" },
+      { "id": "e5", "source": "condition-2", "target": "action-2", "sourceHandle": "yes" },
+      { "id": "e6", "source": "condition-2", "target": "action-3", "sourceHandle": "no" }
+    ]
+  },
+  "variables": [
+    {
+      "name": "store_url",
+      "type": "string",
+      "label": "Store URL",
+      "description": "Your WooCommerce store URL (e.g., https://mystore.co.za)",
+      "required": true
+    },
+    {
+      "name": "support_phone",
+      "type": "string",
+      "label": "Support Phone",
+      "description": "Phone number for customer support",
+      "required": true
+    }
+  ],
+  "configurable_fields": [
+    {
+      "key": "show_order_items",
+      "type": "boolean",
+      "label": "Show Order Items",
+      "description": "Include list of items in order status",
+      "defaultValue": false
+    }
+  ]
+}

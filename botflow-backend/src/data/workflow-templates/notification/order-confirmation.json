@@ -1,0 +1,117 @@
+{
+  "slug": "order-confirmation",
+  "name": "Order Confirmation",
+  "category": "notification",
+  "description": "Automatically send order confirmation messages when new orders are placed.",
+  "icon": "check-circle",
+  "trigger_phrases": [
+    "order placed",
+    "new order",
+    "order confirmation",
+    "purchase confirmed",
+    "order received"
+  ],
+  "keywords": ["order", "confirmation", "placed", "received", "purchase", "notify"],
+  "required_integrations": [],
+  "vertical": "ecommerce",
+  "blueprint": {
+    "name": "Order Confirmation",
+    "description": "Sends confirmation for new orders",
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "trigger",
+        "data": {
+          "label": "New Order Webhook",
+          "triggerType": "webhook",
+          "webhookEvent": "order.created"
+        },
+        "position": { "x": 250, "y": 50 }
+      },
+      {
+        "id": "condition-1",
+        "type": "condition",
+        "data": {
+          "label": "Has Phone Number?",
+          "conditionType": "data_check",
+          "field": "order.customer.phone",
+          "operator": "exists"
+        },
+        "position": { "x": 250, "y": 150 }
+      },
+      {
+        "id": "action-1",
+        "type": "action",
+        "data": {
+          "label": "Format Order Details",
+          "actionType": "format_message",
+          "template": "order_confirmation",
+          "data": {
+            "order_number": "{{order.id}}",
+            "items": "{{order.line_items}}",
+            "total": "{{order.total}}",
+            "customer_name": "{{order.customer.first_name}}"
+          }
+        },
+        "position": { "x": 250, "y": 250 }
+      },
+      {
+        "id": "action-2",
+        "type": "action",
+        "data": {
+          "label": "Send Confirmation",
+          "actionType": "send_whatsapp",
+          "to": "{{order.customer.phone}}",
+          "message": "🛍️ *Order Confirmed!*\n\nHi {{order.customer.first_name}},\n\nThank you for your order from {{business_name}}!\n\n*Order #{{order.id}}*\n{{formatted.items}}\n\n*Total: R{{order.total}}*\n\n📦 We'll notify you when your order ships.\n\nQuestions? Just reply to this message!"
+        },
+        "position": { "x": 250, "y": 350 }
+      },
+      {
+        "id": "action-3",
+        "type": "action",
+        "data": {
+          "label": "Log Notification",
+          "actionType": "log_event",
+          "eventType": "notification_sent",
+          "data": {
+            "order_id": "{{order.id}}",
+            "customer_phone": "{{order.customer.phone}}",
+            "notification_type": "order_confirmation"
+          }
+        },
+        "position": { "x": 250, "y": 450 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "trigger-1", "target": "condition-1" },
+      { "id": "e2", "source": "condition-1", "target": "action-1", "sourceHandle": "yes" },
+      { "id": "e3", "source": "action-1", "target": "action-2" },
+      { "id": "e4", "source": "action-2", "target": "action-3" }
+    ]
+  },
+  "variables": [
+    {
+      "name": "business_name",
+      "type": "string",
+      "label": "Business Name",
+      "description": "Your business name for the confirmation message",
+      "required": true
+    }
+  ],
+  "configurable_fields": [
+    {
+      "key": "include_items",
+      "type": "boolean",
+      "label": "Include Order Items",
+      "description": "List individual items in confirmation",
+      "defaultValue": true
+    },
+    {
+      "key": "include_tracking",
+      "type": "boolean",
+      "label": "Promise Tracking Updates",
+      "description": "Tell customer they'll receive shipping updates",
+      "defaultValue": true
+    }
+  ]
+}

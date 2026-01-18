@@ -1,0 +1,177 @@
+{
+  "slug": "order-tracking-shopify",
+  "name": "Shopify Order Tracking",
+  "category": "ecommerce",
+  "description": "Allow customers to track their Shopify orders via WhatsApp. Automatically fetches order status, shipping info, and delivery estimates.",
+  "icon": "package",
+  "trigger_phrases": [
+    "track order",
+    "where is my order",
+    "order status",
+    "track my package",
+    "delivery status",
+    "when will my order arrive",
+    "shipping update"
+  ],
+  "keywords": ["order", "tracking", "shopify", "delivery", "status", "package", "shipping"],
+  "required_integrations": ["shopify"],
+  "vertical": "ecommerce",
+  "blueprint": {
+    "name": "Shopify Order Tracking",
+    "description": "Tracks orders via Shopify integration",
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "trigger",
+        "data": {
+          "label": "WhatsApp Message Received",
+          "triggerType": "message_received",
+          "description": "Triggered when a customer sends a message"
+        },
+        "position": { "x": 250, "y": 50 }
+      },
+      {
+        "id": "condition-1",
+        "type": "condition",
+        "data": {
+          "label": "Is Order Tracking Request?",
+          "conditionType": "intent_match",
+          "intent": "order_tracking",
+          "keywords": ["track", "order", "where", "status", "delivery"]
+        },
+        "position": { "x": 250, "y": 150 }
+      },
+      {
+        "id": "action-1",
+        "type": "action",
+        "data": {
+          "label": "Extract Order Number",
+          "actionType": "extract_entity",
+          "entityType": "order_number",
+          "pattern": "#?[A-Z0-9]{4,}",
+          "promptIfMissing": "Please provide your order number (e.g., #12345 or ABC123)"
+        },
+        "position": { "x": 250, "y": 250 }
+      },
+      {
+        "id": "integration-1",
+        "type": "integration",
+        "data": {
+          "label": "Fetch from Shopify",
+          "integration": "shopify",
+          "action": "get_order",
+          "inputs": {
+            "order_number": "{{extracted.order_number}}"
+          }
+        },
+        "position": { "x": 250, "y": 350 }
+      },
+      {
+        "id": "condition-2",
+        "type": "condition",
+        "data": {
+          "label": "Order Found?",
+          "conditionType": "data_check",
+          "field": "shopify.order",
+          "operator": "exists"
+        },
+        "position": { "x": 250, "y": 450 }
+      },
+      {
+        "id": "action-2",
+        "type": "action",
+        "data": {
+          "label": "Format Order Status",
+          "actionType": "format_message",
+          "template": "order_status",
+          "message": "📦 *Order Status*\n\nOrder: {{shopify.order.name}}\nStatus: {{shopify.order.fulfillment_status}}\n\n{{#if shopify.order.tracking_url}}Track your package: {{shopify.order.tracking_url}}{{/if}}\n\nEstimated delivery: {{shopify.order.estimated_delivery}}"
+        },
+        "position": { "x": 150, "y": 550 }
+      },
+      {
+        "id": "action-3",
+        "type": "action",
+        "data": {
+          "label": "Order Not Found Message",
+          "actionType": "send_message",
+          "message": "I couldn't find an order with that number. Please check the order number and try again, or contact our support team at {{business_email}}."
+        },
+        "position": { "x": 350, "y": 550 }
+      },
+      {
+        "id": "action-4",
+        "type": "action",
+        "data": {
+          "label": "Send Response",
+          "actionType": "send_message",
+          "useFormatted": true
+        },
+        "position": { "x": 150, "y": 650 }
+      },
+      {
+        "id": "action-5",
+        "type": "action",
+        "data": {
+          "label": "Fallback Response",
+          "actionType": "send_message",
+          "message": "I'm sorry, I can help you track orders. Please send your order number to check the status."
+        },
+        "position": { "x": 450, "y": 250 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "trigger-1", "target": "condition-1" },
+      { "id": "e2", "source": "condition-1", "target": "action-1", "sourceHandle": "yes" },
+      { "id": "e3", "source": "condition-1", "target": "action-5", "sourceHandle": "no" },
+      { "id": "e4", "source": "action-1", "target": "integration-1" },
+      { "id": "e5", "source": "integration-1", "target": "condition-2" },
+      { "id": "e6", "source": "condition-2", "target": "action-2", "sourceHandle": "yes" },
+      { "id": "e7", "source": "condition-2", "target": "action-3", "sourceHandle": "no" },
+      { "id": "e8", "source": "action-2", "target": "action-4" }
+    ]
+  },
+  "variables": [
+    {
+      "name": "shopify_store",
+      "type": "string",
+      "label": "Shopify Store URL",
+      "description": "Your Shopify store domain (e.g., mystore.myshopify.com)",
+      "required": true,
+      "validation": {
+        "pattern": "^[a-z0-9-]+\\.myshopify\\.com$",
+        "message": "Please enter a valid Shopify store URL"
+      }
+    },
+    {
+      "name": "business_email",
+      "type": "string",
+      "label": "Support Email",
+      "description": "Email address for customer support",
+      "required": true,
+      "validation": {
+        "pattern": "^[^@]+@[^@]+\\.[^@]+$",
+        "message": "Please enter a valid email address"
+      }
+    }
+  ],
+  "configurable_fields": [
+    {
+      "key": "response_style",
+      "type": "select",
+      "label": "Response Style",
+      "description": "How detailed should order status messages be?",
+      "defaultValue": "detailed",
+      "options": [
+        { "value": "brief", "label": "Brief - Just the essentials" },
+        { "value": "detailed", "label": "Detailed - Full tracking info" }
+      ]
+    },
+    {
+      "key": "include_tracking_link",
+      "type": "boolean",
+      "label": "Include Tracking Link",
+      "description": "Include courier tracking link in response",
+      "defaultValue": true
+    }
+  ]
+}

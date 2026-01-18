@@ -1,0 +1,124 @@
+{
+  "slug": "shipping-update",
+  "name": "Shipping Update Notification",
+  "category": "notification",
+  "description": "Send automatic shipping status updates when orders are dispatched or delivered.",
+  "icon": "truck",
+  "trigger_phrases": [
+    "shipping update",
+    "delivery update",
+    "order shipped",
+    "package dispatched",
+    "out for delivery"
+  ],
+  "keywords": ["shipping", "delivery", "dispatched", "tracking", "courier", "update"],
+  "required_integrations": [],
+  "vertical": "ecommerce",
+  "blueprint": {
+    "name": "Shipping Update",
+    "description": "Sends shipping status notifications",
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "trigger",
+        "data": {
+          "label": "Fulfillment Webhook",
+          "triggerType": "webhook",
+          "webhookEvent": "fulfillment.updated"
+        },
+        "position": { "x": 250, "y": 50 }
+      },
+      {
+        "id": "condition-1",
+        "type": "condition",
+        "data": {
+          "label": "Check Status",
+          "conditionType": "switch",
+          "field": "fulfillment.status",
+          "cases": ["shipped", "out_for_delivery", "delivered"]
+        },
+        "position": { "x": 250, "y": 150 }
+      },
+      {
+        "id": "action-shipped",
+        "type": "action",
+        "data": {
+          "label": "Shipped Message",
+          "actionType": "send_whatsapp",
+          "to": "{{order.customer.phone}}",
+          "message": "📦 *Your Order Has Shipped!*\n\nGreat news, {{order.customer.first_name}}!\n\nYour order #{{order.id}} is on its way.\n\n🚚 Courier: {{fulfillment.courier}}\n📋 Tracking: {{fulfillment.tracking_number}}\n\n🔗 Track your package:\n{{fulfillment.tracking_url}}\n\nEstimated delivery: {{fulfillment.estimated_delivery}}"
+        },
+        "position": { "x": 100, "y": 300 }
+      },
+      {
+        "id": "action-out-for-delivery",
+        "type": "action",
+        "data": {
+          "label": "Out for Delivery Message",
+          "actionType": "send_whatsapp",
+          "to": "{{order.customer.phone}}",
+          "message": "🚛 *Out for Delivery!*\n\nHi {{order.customer.first_name}},\n\nYour order #{{order.id}} is out for delivery today!\n\nPlease ensure someone is available to receive the package at:\n📍 {{order.shipping_address}}\n\nTrack live: {{fulfillment.tracking_url}}"
+        },
+        "position": { "x": 250, "y": 300 }
+      },
+      {
+        "id": "action-delivered",
+        "type": "action",
+        "data": {
+          "label": "Delivered Message",
+          "actionType": "send_whatsapp",
+          "to": "{{order.customer.phone}}",
+          "message": "✅ *Delivered!*\n\nHi {{order.customer.first_name}},\n\nYour order #{{order.id}} has been delivered!\n\nWe hope you love your purchase. 💚\n\n*How was your experience?*\nReply with 1-5 stars ⭐\n\nNeed help? Just reply to this message."
+        },
+        "position": { "x": 400, "y": 300 }
+      },
+      {
+        "id": "action-log",
+        "type": "action",
+        "data": {
+          "label": "Log Update",
+          "actionType": "log_event",
+          "eventType": "shipping_notification_sent",
+          "data": {
+            "order_id": "{{order.id}}",
+            "status": "{{fulfillment.status}}"
+          }
+        },
+        "position": { "x": 250, "y": 450 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "trigger-1", "target": "condition-1" },
+      { "id": "e2", "source": "condition-1", "target": "action-shipped", "sourceHandle": "shipped" },
+      { "id": "e3", "source": "condition-1", "target": "action-out-for-delivery", "sourceHandle": "out_for_delivery" },
+      { "id": "e4", "source": "condition-1", "target": "action-delivered", "sourceHandle": "delivered" },
+      { "id": "e5", "source": "action-shipped", "target": "action-log" },
+      { "id": "e6", "source": "action-out-for-delivery", "target": "action-log" },
+      { "id": "e7", "source": "action-delivered", "target": "action-log" }
+    ]
+  },
+  "variables": [],
+  "configurable_fields": [
+    {
+      "key": "collect_feedback",
+      "type": "boolean",
+      "label": "Collect Feedback",
+      "description": "Ask for rating after delivery",
+      "defaultValue": true
+    },
+    {
+      "key": "notify_shipped",
+      "type": "boolean",
+      "label": "Notify on Shipped",
+      "description": "Send message when order ships",
+      "defaultValue": true
+    },
+    {
+      "key": "notify_out_for_delivery",
+      "type": "boolean",
+      "label": "Notify Out for Delivery",
+      "description": "Send message when out for delivery",
+      "defaultValue": true
+    }
+  ]
+}

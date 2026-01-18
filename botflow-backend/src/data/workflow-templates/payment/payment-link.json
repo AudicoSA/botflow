@@ -1,0 +1,153 @@
+{
+  "slug": "payment-link-payfast",
+  "name": "Payment Link (PayFast)",
+  "category": "payment",
+  "description": "Send secure PayFast payment links to customers via WhatsApp. South Africa's trusted payment gateway.",
+  "icon": "credit-card",
+  "trigger_phrases": [
+    "pay",
+    "payment",
+    "send payment link",
+    "pay now",
+    "make payment",
+    "how to pay",
+    "payment options"
+  ],
+  "keywords": ["pay", "payment", "payfast", "link", "money", "checkout", "card"],
+  "required_integrations": ["payfast"],
+  "vertical": null,
+  "blueprint": {
+    "name": "PayFast Payment Link",
+    "description": "Generates and sends PayFast payment links",
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "trigger",
+        "data": {
+          "label": "Message Received",
+          "triggerType": "message_received"
+        },
+        "position": { "x": 250, "y": 50 }
+      },
+      {
+        "id": "condition-1",
+        "type": "condition",
+        "data": {
+          "label": "Payment Request?",
+          "conditionType": "intent_match",
+          "intent": "payment",
+          "keywords": ["pay", "payment", "checkout", "buy"]
+        },
+        "position": { "x": 250, "y": 150 }
+      },
+      {
+        "id": "action-1",
+        "type": "action",
+        "data": {
+          "label": "Get Amount",
+          "actionType": "extract_entity",
+          "entityType": "amount",
+          "promptIfMissing": "What amount would you like to pay? (e.g., R500 or 500)"
+        },
+        "position": { "x": 250, "y": 250 }
+      },
+      {
+        "id": "action-2",
+        "type": "action",
+        "data": {
+          "label": "Get Reference",
+          "actionType": "extract_entity",
+          "entityType": "reference",
+          "promptIfMissing": "What is this payment for? (e.g., order number, invoice number, or description)"
+        },
+        "position": { "x": 250, "y": 350 }
+      },
+      {
+        "id": "integration-1",
+        "type": "integration",
+        "data": {
+          "label": "Generate PayFast Link",
+          "integration": "payfast",
+          "action": "create_payment_link",
+          "inputs": {
+            "amount": "{{extracted.amount}}",
+            "item_name": "{{extracted.reference}}",
+            "custom_str1": "{{customer.phone}}",
+            "email_address": "{{customer.email}}"
+          }
+        },
+        "position": { "x": 250, "y": 450 }
+      },
+      {
+        "id": "condition-2",
+        "type": "condition",
+        "data": {
+          "label": "Link Generated?",
+          "conditionType": "data_check",
+          "field": "payfast.payment_url",
+          "operator": "exists"
+        },
+        "position": { "x": 250, "y": 550 }
+      },
+      {
+        "id": "action-3",
+        "type": "action",
+        "data": {
+          "label": "Send Payment Link",
+          "actionType": "send_message",
+          "message": "💳 *Payment Link Ready*\n\nAmount: R{{extracted.amount}}\nReference: {{extracted.reference}}\n\n🔗 Click to pay securely:\n{{payfast.payment_url}}\n\nThis link is valid for 24 hours. Payment is processed securely via PayFast.\n\n✅ We accept Visa, Mastercard, and EFT"
+        },
+        "position": { "x": 100, "y": 650 }
+      },
+      {
+        "id": "action-4",
+        "type": "action",
+        "data": {
+          "label": "Error Message",
+          "actionType": "send_message",
+          "message": "I had trouble generating a payment link. Please contact us at {{support_contact}} or try again in a few minutes."
+        },
+        "position": { "x": 400, "y": 650 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "trigger-1", "target": "condition-1" },
+      { "id": "e2", "source": "condition-1", "target": "action-1", "sourceHandle": "yes" },
+      { "id": "e3", "source": "action-1", "target": "action-2" },
+      { "id": "e4", "source": "action-2", "target": "integration-1" },
+      { "id": "e5", "source": "integration-1", "target": "condition-2" },
+      { "id": "e6", "source": "condition-2", "target": "action-3", "sourceHandle": "yes" },
+      { "id": "e7", "source": "condition-2", "target": "action-4", "sourceHandle": "no" }
+    ]
+  },
+  "variables": [
+    {
+      "name": "support_contact",
+      "type": "string",
+      "label": "Support Contact",
+      "description": "Phone or email for payment issues",
+      "required": true
+    }
+  ],
+  "configurable_fields": [
+    {
+      "key": "payment_methods",
+      "type": "multiselect",
+      "label": "Payment Methods",
+      "description": "Which payment methods to show",
+      "options": [
+        { "value": "card", "label": "Credit/Debit Card" },
+        { "value": "eft", "label": "Instant EFT" },
+        { "value": "mobicred", "label": "Mobicred" }
+      ],
+      "defaultValue": ["card", "eft"]
+    },
+    {
+      "key": "confirm_payment",
+      "type": "boolean",
+      "label": "Confirm on Payment",
+      "description": "Send confirmation when payment received",
+      "defaultValue": true
+    }
+  ]
+}

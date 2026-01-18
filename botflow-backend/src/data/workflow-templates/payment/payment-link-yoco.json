@@ -1,0 +1,87 @@
+{
+  "slug": "payment-link-yoco",
+  "name": "Payment Link (Yoco)",
+  "category": "payment",
+  "description": "Send Yoco payment links to customers via WhatsApp. Easy payments for South African businesses.",
+  "icon": "credit-card",
+  "trigger_phrases": [
+    "pay",
+    "payment",
+    "yoco",
+    "card payment",
+    "pay by card",
+    "send link",
+    "pay now"
+  ],
+  "keywords": ["pay", "payment", "yoco", "link", "card", "checkout"],
+  "required_integrations": ["yoco"],
+  "vertical": null,
+  "blueprint": {
+    "name": "Yoco Payment Link",
+    "description": "Generates Yoco payment links",
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "trigger",
+        "data": {
+          "label": "Message Received",
+          "triggerType": "message_received"
+        },
+        "position": { "x": 250, "y": 50 }
+      },
+      {
+        "id": "condition-1",
+        "type": "condition",
+        "data": {
+          "label": "Payment Intent?",
+          "conditionType": "intent_match",
+          "intent": "payment"
+        },
+        "position": { "x": 250, "y": 150 }
+      },
+      {
+        "id": "action-1",
+        "type": "action",
+        "data": {
+          "label": "Get Amount",
+          "actionType": "extract_entity",
+          "entityType": "amount",
+          "promptIfMissing": "How much would you like to pay?"
+        },
+        "position": { "x": 250, "y": 250 }
+      },
+      {
+        "id": "integration-1",
+        "type": "integration",
+        "data": {
+          "label": "Create Yoco Link",
+          "integration": "yoco",
+          "action": "create_checkout",
+          "inputs": {
+            "amount_in_cents": "{{extracted.amount * 100}}",
+            "currency": "ZAR"
+          }
+        },
+        "position": { "x": 250, "y": 350 }
+      },
+      {
+        "id": "action-2",
+        "type": "action",
+        "data": {
+          "label": "Send Link",
+          "actionType": "send_message",
+          "message": "💳 *Ready to Pay*\n\nAmount: R{{extracted.amount}}\n\nTap below to pay securely with Yoco:\n{{yoco.checkout_url}}\n\nAccepts Visa, Mastercard & Amex"
+        },
+        "position": { "x": 250, "y": 450 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "trigger-1", "target": "condition-1" },
+      { "id": "e2", "source": "condition-1", "target": "action-1", "sourceHandle": "yes" },
+      { "id": "e3", "source": "action-1", "target": "integration-1" },
+      { "id": "e4", "source": "integration-1", "target": "action-2" }
+    ]
+  },
+  "variables": [],
+  "configurable_fields": []
+}

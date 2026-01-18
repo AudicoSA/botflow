@@ -278,43 +278,4 @@ export interface InjectionContext {
   environment: 'production' | 'staging' | 'development';
 }
 
-// ============================================================================
-// Export all types
-// ============================================================================
-
-export type {
-  // Blueprint types
-  Blueprint,
-  BlueprintNode,
-  BlueprintEdge,
-  BlueprintCredential,
-
-  // Node Library types
-  NodeDefinition,
-  NodeCategory,
-  NodeInput,
-  NodeOutput,
-  InputType,
-  ValidationRule,
-
-  // n8n types
-  N8nWorkflow,
-  N8nNode,
-  N8nConnections,
-
-  // Versioning types
-  WorkflowVersion,
-  WorkflowStatus,
-  WorkflowCredential,
-
-  // Compilation types
-  ValidationResult,
-  ValidationError,
-  ValidationWarning,
-  CompilationResult,
-  CompilerOptions,
-
-  // Injection types
-  WorkflowVariables,
-  InjectionContext
-};
+// All types are exported at their definition above

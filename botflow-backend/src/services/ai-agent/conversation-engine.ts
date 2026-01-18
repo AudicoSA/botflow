@@ -20,14 +20,17 @@ import {
   ConversationContext,
   ConversationState,
   ParsedIntent,
-  AgentQuestion
+  AgentQuestion,
+  TemplateMatch
 } from '../../types/ai-agent.js';
 import { Blueprint } from '../../types/workflow.js';
 import { getIntentParser, IntentParser } from './intent-parser.js';
 import { getContextManager, ContextManager } from './context-manager.js';
 import { getWorkflowGenerator, WorkflowGenerator } from './workflow-generator.js';
+import { getTemplateMatcher, TemplateMatcherService, TemplateMatchResult } from './template-matcher.js';
 import { getNodeLibrary } from '../node-library.js';
 import { createNodeLibrarySummary } from '../../prompts/bot-builder-prompts.js';
+import { logger } from '../../config/logger.js';
 
 /**
  * Configuration for the Conversation Engine
@@ -103,6 +106,7 @@ export class ConversationEngine {
   private intentParser: IntentParser;
   private contextManager: ContextManager;
   private workflowGenerator: WorkflowGenerator;
+  private templateMatcher: TemplateMatcherService;
 
   constructor(config: Partial<ConversationEngineConfig> = {}) {
     if (!process.env.OPENAI_API_KEY) {
@@ -117,6 +121,7 @@ export class ConversationEngine {
     this.intentParser = getIntentParser();
     this.contextManager = getContextManager();
     this.workflowGenerator = getWorkflowGenerator();
+    this.templateMatcher = getTemplateMatcher();
   }
 
   /**
@@ -264,6 +269,28 @@ export class ConversationEngine {
     // Transition to gathering
     this.contextManager.transitionState(context, 'gathering');
 
+    // Try to find matching templates first
+    try {
+      const availableIntegrations = context.availableIntegrations
+        .filter(i => i.isEnabled)
+        .map(i => i.slug);
+
+      const templateMatches = await this.templateMatcher.findMatches(
+        intent,
+        availableIntegrations,
+        context.userPreferences.vertical,
+        3
+      );
+
+      // If we found good template matches, suggest them
+      if (templateMatches.length > 0 && templateMatches[0].score >= 0.5) {
+        return this.handleTemplateMatches(templateMatches, intent, context);
+      }
+    } catch (error) {
+      // Log but continue - template matching is not critical
+      logger.warn({ error }, 'Template matching failed, continuing with AI generation');
+    }
+
     // If we have enough info, try to generate
     if (intent.confidence >= 0.8 && !intent.needsClarification) {
       return this.attemptGeneration(intent, context);
@@ -271,6 +298,63 @@ export class ConversationEngine {
 
     // Otherwise, ask questions
     return this.generateQuestionResponse(intent, context);
+  }
+
+  /**
+   * Handle template matches - present options to user
+   */
+  private handleTemplateMatches(
+    matches: TemplateMatchResult[],
+    intent: ParsedIntent,
+    context: ConversationContext
+  ): ChatResponse {
+    const bestMatch = matches[0];
+    const template = bestMatch.template;
+
+    // Build the response message
+    let message = `I found a template that matches what you're looking for!\n\n`;
+    message += `📦 **${template.name}**\n`;
+    message += `${template.description}\n\n`;
+
+    // Show what's needed
+    if (template.requiredIntegrations.length > 0) {
+      const hasAll = bestMatch.missingIntegrations.length === 0;
+      if (hasAll) {
+        message += `✅ You have all required integrations\n`;
+      } else {
+        message += `⚠️ Needs: ${bestMatch.missingIntegrations.join(', ')}\n`;
+      }
+    }
+
+    message += `\nWould you like to:\n`;
+    message += `1. **Use this template** (quick setup)\n`;
+    message += `2. **Customize it** (make changes before deploying)\n`;
+    message += `3. **Build from scratch** (I'll create a custom workflow)\n`;
+
+    // Store the template match in context for later use
+    this.contextManager.addRequirement(
+      context,
+      'suggestedTemplate',
+      { matches, selectedIndex: null },
+      'inferred',
+      bestMatch.score
+    );
+
+    return {
+      message,
+      sessionId: context.sessionId,
+      state: 'gathering',
+      actions: [
+        { type: 'suggest', label: 'Use Template', data: { templateSlug: template.slug } },
+        { type: 'modify', label: 'Customize' },
+        { type: 'reset', label: 'Build from Scratch' }
+      ],
+      suggestions: [
+        'Use this template',
+        'Customize it',
+        'Build from scratch'
+      ]
+    };
   }
 
   /**
@@ -283,6 +367,15 @@ export class ConversationEngine {
     // Store new requirements
     this.extractAndStoreRequirements(intent, context);
 
+    // Check if user is responding to a template suggestion
+    const templateSuggestion = context.gatheredRequirements.find(r => r.key === 'suggestedTemplate');
+    if (templateSuggestion) {
+      const response = await this.handleTemplateResponse(intent.rawMessage, templateSuggestion.value, context);
+      if (response) {
+        return response;
+      }
+    }
+
     // Check if we have enough to generate
     const canGenerate = this.hasEnoughRequirements(context);
 
@@ -292,6 +385,127 @@ export class ConversationEngine {
 
     // Continue gathering
     return this.generateQuestionResponse(intent, context);
+  }
+
+  /**
+   * Handle user response to template suggestion
+   */
+  private async handleTemplateResponse(
+    message: string,
+    templateData: { matches: TemplateMatchResult[]; selectedIndex: number | null },
+    context: ConversationContext
+  ): Promise<ChatResponse | null> {
+    const msgLower = message.toLowerCase();
+    const bestMatch = templateData.matches[0];
+
+    // Check if user wants to use the template
+    if (msgLower.includes('use') || msgLower.includes('template') || msgLower.includes('1') || msgLower.includes('yes')) {
+      return this.handleTemplateInstantiation(bestMatch, context);
+    }
+
+    // Check if user wants to customize
+    if (msgLower.includes('customize') || msgLower.includes('2') || msgLower.includes('change')) {
+      return this.handleTemplateCustomization(bestMatch, context);
+    }
+
+    // Check if user wants to build from scratch
+    if (msgLower.includes('scratch') || msgLower.includes('3') || msgLower.includes('custom') || msgLower.includes('no')) {
+      // Remove the template suggestion and continue with normal flow
+      context.gatheredRequirements = context.gatheredRequirements.filter(r => r.key !== 'suggestedTemplate');
+      return null; // Fall through to normal gathering flow
+    }
+
+    // User might be providing variable values for template customization
+    return null;
+  }
+
+  /**
+   * Handle template instantiation
+   */
+  private async handleTemplateInstantiation(
+    match: TemplateMatchResult,
+    context: ConversationContext
+  ): Promise<ChatResponse> {
+    const template = match.template;
+
+    // Check if we need variable values
+    const requiredVars = template.variables.filter(v => v.required);
+    if (requiredVars.length > 0) {
+      // Collect variable values
+      const firstVar = requiredVars[0];
+      return {
+        message: `Great choice! To set up the **${template.name}** template, I need a bit of info.\n\n${firstVar.description || firstVar.label}\n\nPlease provide: **${firstVar.label}**`,
+        sessionId: context.sessionId,
+        state: 'gathering',
+        actions: [],
+        questions: [{
+          id: firstVar.name,
+          text: firstVar.description || `What is your ${firstVar.label}?`,
+          type: 'open',
+          required: true
+        }]
+      };
+    }
+
+    // No variables needed - instantiate directly
+    try {
+      const workflow = await this.templateMatcher.customizeTemplate(template, {
+        variableValues: {},
+        fieldConfig: {}
+      });
+
+      this.contextManager.updateWorkflow(context, workflow, false);
+      this.contextManager.transitionState(context, 'confirming');
+
+      // Remove the template suggestion
+      context.gatheredRequirements = context.gatheredRequirements.filter(r => r.key !== 'suggestedTemplate');
+
+      return {
+        message: `✅ I've created your **${template.name}** workflow with ${workflow.nodes.length} steps!\n\nTake a look and let me know if you'd like to make any changes before deploying.`,
+        sessionId: context.sessionId,
+        state: 'confirming',
+        workflow,
+        actions: [
+          { type: 'deploy', label: 'Deploy Now' },
+          { type: 'modify', label: 'Make Changes' },
+          { type: 'explain', label: 'Explain Steps' }
+        ],
+        suggestions: [
+          'Deploy it',
+          'Show me how it works',
+          'Make a change'
+        ]
+      };
+    } catch (error) {
+      logger.error({ error, template: template.slug }, 'Failed to instantiate template');
+      return {
+        message: `I had trouble setting up that template. Let's build one from scratch instead - what should your bot do?`,
+        sessionId: context.sessionId,
+        state: 'gathering',
+        actions: []
+      };
+    }
+  }
+
+  /**
+   * Handle template customization request
+   */
+  private handleTemplateCustomization(
+    match: TemplateMatchResult,
+    context: ConversationContext
+  ): ChatResponse {
+    const template = match.template;
+
+    return {
+      message: `I'll help you customize the **${template.name}** template.\n\nWhat would you like to change? You can:\n• Add more steps\n• Change the messages\n• Add error handling\n• Connect different integrations\n\nJust describe what you want!`,
+      sessionId: context.sessionId,
+      state: 'refining',
+      workflow: template.blueprint,
+      actions: [
+        { type: 'deploy', label: 'Deploy As-Is' },
+        { type: 'reset', label: 'Start Over' }
+      ]
+    };
   }
 
   /**

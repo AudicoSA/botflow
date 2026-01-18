@@ -1,0 +1,185 @@
+{
+  "slug": "ticket-creation",
+  "name": "Support Ticket Creation",
+  "category": "support",
+  "description": "Allow customers to create support tickets via WhatsApp. Captures issue details and assigns tickets.",
+  "icon": "ticket",
+  "trigger_phrases": [
+    "create ticket",
+    "report issue",
+    "support ticket",
+    "i have a problem",
+    "something wrong",
+    "need help",
+    "complaint"
+  ],
+  "keywords": ["ticket", "support", "issue", "problem", "help", "complaint", "report"],
+  "required_integrations": [],
+  "vertical": null,
+  "blueprint": {
+    "name": "Support Ticket Creation",
+    "description": "Creates support tickets from WhatsApp messages",
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "trigger",
+        "data": {
+          "label": "Message Received",
+          "triggerType": "message_received"
+        },
+        "position": { "x": 250, "y": 50 }
+      },
+      {
+        "id": "condition-1",
+        "type": "condition",
+        "data": {
+          "label": "Support Request?",
+          "conditionType": "intent_match",
+          "intent": "support_request",
+          "keywords": ["problem", "issue", "help", "broken", "not working", "complaint"]
+        },
+        "position": { "x": 250, "y": 150 }
+      },
+      {
+        "id": "action-1",
+        "type": "action",
+        "data": {
+          "label": "Get Issue Category",
+          "actionType": "extract_entity",
+          "entityType": "category",
+          "promptIfMissing": "I'm sorry to hear you're having trouble. What's the issue about?\n\n1. {{category_1}}\n2. {{category_2}}\n3. {{category_3}}\n4. Other\n\nPlease reply with a number or describe your issue."
+        },
+        "position": { "x": 250, "y": 250 }
+      },
+      {
+        "id": "action-2",
+        "type": "action",
+        "data": {
+          "label": "Get Description",
+          "actionType": "extract_entity",
+          "entityType": "description",
+          "promptIfMissing": "Please describe the issue in detail. Include any error messages or what you were trying to do."
+        },
+        "position": { "x": 250, "y": 350 }
+      },
+      {
+        "id": "action-3",
+        "type": "action",
+        "data": {
+          "label": "Get Customer Info",
+          "actionType": "extract_entity",
+          "entityType": "email",
+          "promptIfMissing": "What's your email address so we can send you updates on this ticket?"
+        },
+        "position": { "x": 250, "y": 450 }
+      },
+      {
+        "id": "action-4",
+        "type": "action",
+        "data": {
+          "label": "Create Ticket",
+          "actionType": "create_record",
+          "recordType": "support_ticket",
+          "data": {
+            "category": "{{extracted.category}}",
+            "description": "{{extracted.description}}",
+            "customer_phone": "{{customer.phone}}",
+            "customer_email": "{{extracted.email}}",
+            "status": "open",
+            "priority": "normal"
+          }
+        },
+        "position": { "x": 250, "y": 550 }
+      },
+      {
+        "id": "action-5",
+        "type": "action",
+        "data": {
+          "label": "Send Confirmation",
+          "actionType": "send_message",
+          "message": "✅ *Support Ticket Created*\n\nTicket #: {{record.ticket_id}}\nCategory: {{extracted.category}}\n\nOur team will review your issue and get back to you within {{response_time}}.\n\nYou can check your ticket status anytime by sending 'ticket status {{record.ticket_id}}'"
+        },
+        "position": { "x": 250, "y": 650 }
+      },
+      {
+        "id": "action-6",
+        "type": "action",
+        "data": {
+          "label": "Notify Support Team",
+          "actionType": "send_notification",
+          "channel": "email",
+          "to": "{{support_email}}",
+          "subject": "New Support Ticket #{{record.ticket_id}}",
+          "message": "New ticket from {{customer.phone}}\n\nCategory: {{extracted.category}}\nDescription: {{extracted.description}}"
+        },
+        "position": { "x": 450, "y": 650 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "trigger-1", "target": "condition-1" },
+      { "id": "e2", "source": "condition-1", "target": "action-1", "sourceHandle": "yes" },
+      { "id": "e3", "source": "action-1", "target": "action-2" },
+      { "id": "e4", "source": "action-2", "target": "action-3" },
+      { "id": "e5", "source": "action-3", "target": "action-4" },
+      { "id": "e6", "source": "action-4", "target": "action-5" },
+      { "id": "e7", "source": "action-4", "target": "action-6" }
+    ]
+  },
+  "variables": [
+    {
+      "name": "category_1",
+      "type": "string",
+      "label": "Category 1",
+      "description": "First support category",
+      "required": true,
+      "defaultValue": "Billing & Payments"
+    },
+    {
+      "name": "category_2",
+      "type": "string",
+      "label": "Category 2",
+      "description": "Second support category",
+      "required": true,
+      "defaultValue": "Technical Issues"
+    },
+    {
+      "name": "category_3",
+      "type": "string",
+      "label": "Category 3",
+      "description": "Third support category",
+      "required": true,
+      "defaultValue": "Orders & Delivery"
+    },
+    {
+      "name": "support_email",
+      "type": "string",
+      "label": "Support Team Email",
+      "description": "Email to notify when new tickets are created",
+      "required": true
+    },
+    {
+      "name": "response_time",
+      "type": "string",
+      "label": "Response Time Promise",
+      "description": "How long until the team responds",
+      "required": true,
+      "defaultValue": "24 hours"
+    }
+  ],
+  "configurable_fields": [
+    {
+      "key": "priority_detection",
+      "type": "boolean",
+      "label": "Auto-Detect Priority",
+      "description": "Automatically set priority based on keywords",
+      "defaultValue": true
+    },
+    {
+      "key": "attachment_support",
+      "type": "boolean",
+      "label": "Allow Attachments",
+      "description": "Let customers attach screenshots or files",
+      "defaultValue": true
+    }
+  ]
+}
