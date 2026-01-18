@@ -6,7 +6,7 @@
  * instantiate and customize.
  */
 
-import { supabase } from '../../config/supabase.js';
+import { supabaseAdmin } from '../../config/supabase.js';
 import { logger } from '../../config/logger.js';
 import {
   WorkflowTemplate,
@@ -149,7 +149,7 @@ export class TemplateLibraryService {
     } = options;
 
     try {
-      let query = supabase
+      let query = supabaseAdmin
         .from('workflow_templates')
         .select('*', { count: 'exact' });
 
@@ -221,7 +221,7 @@ export class TemplateLibraryService {
    */
   async getTemplateBySlug(slug: string): Promise<WorkflowTemplate | null> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('workflow_templates')
         .select('*')
         .eq('slug', slug)
@@ -246,7 +246,7 @@ export class TemplateLibraryService {
    */
   async getTemplateById(id: string): Promise<WorkflowTemplate | null> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('workflow_templates')
         .select('*')
         .eq('id', id)
@@ -279,7 +279,7 @@ export class TemplateLibraryService {
    */
   async getCategories(): Promise<Array<{ name: string; count: number }>> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('workflow_templates')
         .select('category')
         .eq('is_public', true);
@@ -312,7 +312,7 @@ export class TemplateLibraryService {
       const searchLower = query.toLowerCase().trim();
 
       // Search in trigger phrases, keywords, name, and description
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('workflow_templates')
         .select('*')
         .eq('is_public', true)
@@ -342,7 +342,7 @@ export class TemplateLibraryService {
     limit = 5
   ): Promise<WorkflowTemplate[]> {
     try {
-      let query = supabase
+      let query = supabaseAdmin
         .from('workflow_templates')
         .select('*')
         .eq('is_public', true);
@@ -398,7 +398,7 @@ export class TemplateLibraryService {
    */
   async createTemplate(data: CreateTemplateData): Promise<WorkflowTemplate> {
     try {
-      const { data: result, error } = await supabase
+      const { data: result, error } = await supabaseAdmin
         .from('workflow_templates')
         .insert({
           slug: data.slug,
@@ -453,7 +453,7 @@ export class TemplateLibraryService {
       if (updates.configurableFields) updateData.configurable_fields = updates.configurableFields;
       if (updates.isPublic !== undefined) updateData.is_public = updates.isPublic;
 
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('workflow_templates')
         .update(updateData)
         .eq('slug', slug)
@@ -477,7 +477,7 @@ export class TemplateLibraryService {
    */
   async deleteTemplate(slug: string): Promise<boolean> {
     try {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('workflow_templates')
         .delete()
         .eq('slug', slug);
@@ -504,7 +504,7 @@ export class TemplateLibraryService {
     customizations: Record<string, unknown> = {}
   ): Promise<string> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('workflow_template_usage')
         .insert({
           template_id: templateId,
@@ -551,7 +551,7 @@ export class TemplateLibraryService {
         updates.user_rating = metrics.userRating;
       }
 
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('workflow_template_usage')
         .update(updates)
         .eq('id', usageId);
@@ -575,7 +575,7 @@ export class TemplateLibraryService {
     successRate: number;
   }> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('workflow_template_usage')
         .select('*')
         .eq('template_id', templateId);
