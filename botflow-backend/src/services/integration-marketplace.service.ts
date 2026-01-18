@@ -328,13 +328,20 @@ export class IntegrationMarketplaceService {
   }
 
   /**
-   * Get all enabled integrations for a bot
+   * Get all enabled integrations for a bot with full integration details
    */
   async getBotIntegrations(botId: string): Promise<BotIntegration[]> {
     // Use admin client to bypass RLS
+    // Include joined integration details from integration_marketplace
     const { data, error } = await supabaseAdmin
       .from('bot_integrations')
-      .select('*')
+      .select(`
+        *,
+        integration:integration_marketplace(
+          id, name, slug, icon_url, category, description,
+          requires_auth, setup_instructions, supported_features
+        )
+      `)
       .eq('bot_id', botId)
       .order('created_at', { ascending: false });
 
@@ -342,10 +349,11 @@ export class IntegrationMarketplaceService {
       throw new Error(`Failed to get bot integrations: ${error.message}`);
     }
 
-    // Decrypt credentials for each integration
+    // Decrypt credentials for each integration (but don't expose in list view for security)
     return (data || []).map((integration) => ({
       ...integration,
-      credentials: this.decryptCredentials(integration.credentials),
+      // Don't expose credentials in list endpoint for security
+      credentials: undefined,
     })) as BotIntegration[];
   }
 
