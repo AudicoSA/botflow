@@ -642,107 +642,220 @@ Key remaining work:
 
 ---
 
-## Phase 2: Intelligent Bot Factory (In Progress) 🏭
+## Phase 2: Intelligent Bot Factory ✅ (97% Complete)
 
 **Goal:** Transform BotFlow from a template deployer into an intelligent, dynamic workflow factory that builds custom solutions automatically.
 
-### Phase 2 Overview
-- **Duration:** 6 Weeks (Started: Week 13)
-- **Core Tech:** n8n workflows, pgvector (PostgreSQL native), RAG, Dynamic workflow compilation
-- **Status**: Week 1 - Days 1-4 Complete! ✅
+### Phase 2 Progress Summary (Week 8)
+```
+Week 1: Knowledge Base & RAG      [████████████] 100% ✅
+Week 2: Workflow Engine           [████████████] 100% ✅
+Week 3: Intelligent Bot Builder   [████████████] 100% ✅
+Week 4: Visual Builder UI         [████████████] 100% ✅
+Week 5: Analytics Dashboard       [████████████] 100% ✅
+Week 6: Production Deployment     [████████████] 100% ✅
+Week 7: Marketplace Backend       [████████████] 100% ✅
+Week 8: Frontend & Testing        [████████████]  97% 🔧
 
-### Phase 2 Architecture
+Overall Progress:                 [████████████]  97%
+```
 
-**RAG (Retrieval-Augmented Generation):**
-- **Vector Database**: pgvector (PostgreSQL native) - no external service needed
-- **Embeddings**: OpenAI text-embedding-3-small (1536 dimensions)
-- **Search**: Cosine similarity with IVFFLAT index
-- **Storage**: Supabase Storage for document files
-- **Processing**: n8n workflows for async PDF parsing and embedding generation
+### Core Technologies
+- **pgvector**: PostgreSQL native vector search (no external vector DB needed!)
+- **OpenAI Embeddings**: text-embedding-3-small (1536 dimensions)
+- **React Flow**: Visual workflow builder for drag-and-drop bot design
+- **n8n**: Workflow automation for document processing
+- **RAG**: Retrieval-Augmented Generation for knowledge-based responses
+- **Recharts**: Analytics dashboard visualizations
 
-**Database Schema (Phase 2):**
-- `knowledge_base_articles` - Document metadata and status tracking
-- `knowledge_embeddings` - Vector embeddings with pgvector (1536 dimensions)
-- `search_knowledge()` - PostgreSQL function for similarity search
-- `hybrid_search_knowledge()` - Combined vector + keyword search
-- `get_knowledge_stats()` - Analytics helper function
+### Phase 2 Features
 
-**New API Routes:**
+#### Knowledge Base & RAG (Week 1) ✅
+- pgvector extension enabled in Supabase PostgreSQL
+- Support for PDF, URL, and plain text sources
+- Vector similarity search with cosine distance
+- Hybrid search combining vector + keyword matching
+- Automatic embedding generation via OpenAI
+- RAG context injection into AI responses
+
+**Key Files:**
+- `botflow-backend/src/routes/knowledge.ts` - API endpoints
+- `botflow-backend/src/services/knowledge-search.ts` - Search service
+- `botflow-backend/src/services/pdf-processor.service.ts` - PDF processing
+- `botflow-website/app/dashboard/bots/[id]/KnowledgeBaseTab.tsx` - Frontend UI
+
+#### Visual Workflow Builder (Week 4) ✅
+- React Flow-based drag-and-drop builder
+- 4 node types: Trigger, Action, Condition, Integration
+- Node configuration panels for each type
+- Workflow save/load to database (JSONB)
+- Dynamic integration nodes from marketplace
+
+**Key Files:**
+- `botflow-website/app/dashboard/bots/[id]/workflow/page.tsx` - Builder page
+- `botflow-website/app/dashboard/bots/[id]/workflow/CustomNodes.tsx` - Node components
+- `botflow-website/app/dashboard/bots/[id]/workflow/NodePalette.tsx` - Node sidebar
+- `botflow-website/app/dashboard/bots/[id]/workflow/NodeConfigPanel.tsx` - Configuration
+
+#### Analytics Dashboard (Week 5) ✅
+- Real-time metrics via WebSocket streaming
+- Response time charts (p50, p95, average)
+- Message volume charts (inbound/outbound)
+- CSV export functionality
+- Bot-specific performance metrics
+
+**Key Files:**
+- `botflow-backend/src/routes/analytics.ts` - API endpoints
+- `botflow-backend/src/routes/analytics-ws.ts` - WebSocket streaming
+- `botflow-backend/src/services/metrics.service.ts` - Metrics aggregation
+- `botflow-website/app/dashboard/analytics/` - Dashboard pages
+- `botflow-website/app/components/analytics/` - Chart components
+
+#### Integration Marketplace (Week 7-8) ✅
+- 130+ integrations across 12 categories
+- Dynamic credential forms via `credential_schema` JSONB
+- Credential validation for 11+ providers
+- Bot-specific integration management
+- South African payment gateways (PayFast, Yoco, iKhokha)
+
+**Key Files:**
+- `botflow-backend/src/routes/marketplace.ts` - API endpoints
+- `botflow-backend/src/services/credential-validator.service.ts` - Validation
+- `botflow-website/app/components/EnableIntegrationModal.tsx` - Enable modal
+- `botflow-website/app/dashboard/marketplace/page.tsx` - Marketplace page
+
+### Phase 2 API Endpoints
+
+**Knowledge Base:**
 - `GET /api/bots/:botId/knowledge` - List knowledge sources
 - `POST /api/bots/:botId/knowledge` - Initialize file upload
-- `POST /bots/:botId/knowledge/:articleId/process` - Trigger processing
-- `POST /bots/:botId/knowledge/:articleId/complete` - Processing webhook
-- `GET /bots/:botId/knowledge/stats` - Get statistics
-- `DELETE /bots/:botId/knowledge/:articleId` - Delete source
+- `POST /api/bots/:botId/knowledge/source` - Add URL or text source
+- `POST /api/bots/:botId/knowledge/:articleId/process` - Trigger processing
+- `POST /api/bots/:botId/knowledge/search` - Vector similarity search
+- `GET /api/bots/:botId/knowledge/stats` - Get statistics
+- `DELETE /api/bots/:botId/knowledge/:articleId` - Delete source
+
+**Analytics:**
+- `GET /api/analytics/realtime` - Real-time organization metrics
+- `GET /api/analytics/response-times?period=24h|7d|30d` - Response time trends
+- `GET /api/analytics/message-volume?period=24h|7d|30d` - Message volume
+- `GET /api/analytics/bot/:botId/performance` - Bot performance summary
+- `GET /api/analytics/export` - CSV export
+- `GET /api/analytics/stream` - WebSocket real-time updates
+
+**Workflow:**
+- `PATCH /api/bots/:id` - Save workflow (nodes/edges as JSONB)
+
+### Database Schema (Phase 2)
+- `knowledge_base_articles` - Document metadata and status
+- `knowledge_embeddings` - Vector embeddings with pgvector (1536 dimensions)
+- `conversation_metrics` - Per-conversation analytics
+- `bot_performance_metrics` - Daily bot aggregates
+- `usage_analytics` - Hourly organization metrics
+- `integration_marketplace` - Available integrations catalog
+- `bot_integrations` - Per-bot enabled integrations
+
+### Phase 2 Documentation
+- [PHASE2_SCHEDULE.md](./PHASE2_SCHEDULE.md) - 6-week roadmap
+- [PHASE2_WEEK8.4_GUIDE.md](./PHASE2_WEEK8.4_GUIDE.md) - Current status and remaining tasks
+- [PHASE2_PROGRESS.md](./PHASE2_PROGRESS.md) - Progress tracker
 
 ---
 
-## Phase 2: The Intelligent Bot Factory 🏭
+## Phase 3: AI-Powered Workflow Builder Agent (In Progress)
 
-### Overview
-Phase 2 transforms BotFlow from a template deployer into an intelligent, dynamic workflow factory. Users can build truly custom bots that connect to their specific tools (Shopify, ShipLogic, etc.) and use their own knowledge base for accurate responses.
+**Goal:** Transform the workflow builder from drag-and-drop into a conversational AI interface where users describe what they want and the agent builds it automatically.
 
-### Key Technologies
-- **pgvector**: PostgreSQL native vector search (no external vector DB needed!)
-- **OpenAI Embeddings**: text-embedding-3-small (1536 dimensions)
-- **n8n**: Workflow automation for async processing
-- **Supabase Storage**: File uploads with signed URLs
-- **HMAC Signatures**: Webhook security
+### Phase 3 Progress Summary
+```
+Week 1: Agent Foundation           [████████████] 100% ✅
+Week 2: Conversation System        [            ]   0%
+Week 3: Template System            [            ]   0%
+Week 4: Frontend Integration       [            ]   0%
+Week 5: Intelligence Enhancement   [            ]   0%
+Week 6: Testing & Polish           [            ]   0%
 
-### Phase 2 Documentation
-- [PHASE2_SCHEDULE.md](./PHASE2_SCHEDULE.md) - 6-week roadmap with security and testing
-- [PHASE2_WEEK1_GUIDE.md](./PHASE2_WEEK1_GUIDE.md) - Detailed Week 1 implementation guide
-- [PHASE2_WEEK1_QUICKSTART.md](./PHASE2_WEEK1_QUICKSTART.md) - Quick setup guide
-- [PHASE2_PROGRESS.md](./PHASE2_PROGRESS.md) - Progress tracker and status
+Overall Progress:                  [██          ]  17%
+```
 
-## Phase 2: The Intelligent Bot Factory 🏭
+### Core Components
 
-Phase 2 transforms BotFlow from a template deployer into an intelligent, dynamic workflow factory that builds custom solutions automatically.
+**Intent Parser** (`src/services/ai-agent/intent-parser.ts`)
+- GPT-4o powered natural language understanding
+- Entity extraction (services, actions, data, conditions)
+- Integration detection for SA services (PayFast, Yoco, Shopify, etc.)
+- Workflow type detection (order_tracking, booking, faq, payment, etc.)
+- Confidence scoring with clarification questions
+- Quick detection for common commands
 
-### Phase 2 Architecture
+**Context Manager** (`src/services/ai-agent/context-manager.ts`)
+- Session management with Redis caching support
+- State machine: idle → gathering → confirming → refining → deploying → complete
+- Message history with sliding window (50 messages max)
+- Requirement gathering and tracking
+- Workflow versioning for undo functionality
+- User preferences and available integrations
 
-**Core Technologies:**
-- **pgvector**: PostgreSQL native vector search (no external vector DB needed!)
-- **OpenAI Embeddings**: text-embedding-3-small (1536 dimensions)
-- **n8n**: Workflow automation for document processing
-- **RAG**: Retrieval-Augmented Generation for knowledge-based responses
+**Workflow Generator** (`src/services/ai-agent/workflow-generator.ts`)
+- GPT-4o powered Blueprint JSON generation
+- Intent-to-workflow conversion
+- Workflow refinement from natural language modifications
+- Auto-fix for common validation issues
+- Confidence scoring
+- Natural language explanation generation
 
-### Week 1: Knowledge Base & RAG (IN PROGRESS)
+**Conversation Engine** (`src/services/ai-agent/conversation-engine.ts`)
+- Main orchestrator for the AI agent
+- State-based conversation routing
+- Contextual response generation
+- Quick command handling (help, undo, deploy, reset)
+- South African context awareness
 
-**Status:** Day 1-4 Complete! ✅
+### Phase 3 API Endpoints
 
-**What's Working:**
-- ✅ pgvector extension enabled in Supabase PostgreSQL
-- ✅ Database schema with `knowledge_base_articles` and `knowledge_embeddings` tables
-- ✅ Vector similarity search functions (`search_knowledge`, `hybrid_search_knowledge`)
-- ✅ Backend API routes for file upload and management
-- ✅ HMAC webhook security for n8n integration
-- ✅ Supabase Storage integration with signed URLs
-- ✅ Organization-based access control
+**AI Agent:**
+- `POST /api/bots/:botId/agent/chat` - Conversational workflow building
+- `POST /api/bots/:botId/agent/generate` - Direct workflow generation
+- `POST /api/bots/:botId/agent/refine` - Refine existing workflow
+- `POST /api/bots/:botId/agent/deploy` - Deploy workflow to bot
+- `GET /api/bots/:botId/agent/session` - Get session info
+- `DELETE /api/bots/:botId/agent/session/:sessionId` - Delete session
+- `GET /api/bots/:botId/agent/explain` - Get workflow explanation
+- `GET /api/bots/:botId/agent/stats` - Get usage statistics
 
-**Key Files:**
-- `botflow-backend/migrations/001_pgvector_knowledge_base.sql` - Database schema
-- `botflow-backend/src/routes/knowledge.ts` - API endpoints
-- `PHASE2_WEEK1_GUIDE.md` - Detailed implementation guide
-- `PHASE2_WEEK1_QUICKSTART.md` - Quick setup instructions
-- `PHASE2_PROGRESS.md` - Progress tracking
+### Example: Conversational Workflow Building
 
-**API Endpoints (Phase 2):**
-- `GET /api/bots/:botId/knowledge` - List knowledge sources
-- `POST /api/bots/:botId/knowledge` - Initialize file upload
-- `POST /api/bots/:botId/knowledge/:articleId/process` - Trigger processing
-- `POST /bots/:botId/knowledge/:articleId/complete` - n8n callback webhook
-- `GET /bots/:botId/knowledge/stats` - Get statistics
-- `DELETE /bots/:botId/knowledge/:articleId` - Delete source
+```bash
+# Start conversation
+curl -X POST http://localhost:3001/api/bots/:botId/agent/chat \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "I want customers to track their orders from my Shopify store"}'
 
-**Database Tables:**
-- `knowledge_base_articles` - Document metadata and status
-- `knowledge_embeddings` - Vector embeddings for semantic search (pgvector)
+# Response includes:
+# - Clarifying questions
+# - Session ID for continuation
+# - Suggested quick replies
 
-**Key Functions:**
-- `search_knowledge()` - Vector similarity search
-- `hybrid_search_knowledge()` - Combined vector + keyword search
-- `get_knowledge_stats()` - Knowledge base statistics
+# Continue conversation
+curl -X POST http://localhost:3001/api/bots/:botId/agent/chat \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"sessionId": "uuid", "message": "They should enter their order number"}'
+
+# When ready, deploy
+curl -X POST http://localhost:3001/api/bots/:botId/agent/chat \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"sessionId": "uuid", "message": "deploy"}'
+```
+
+### Key Files
+
+- `botflow-backend/src/types/ai-agent.ts` - Type definitions (40+ types)
+- `botflow-backend/src/services/ai-agent/` - Service implementations
+- `botflow-backend/src/routes/ai-agent.ts` - API endpoints
+- [PHASE3_PLAN.md](./PHASE3_PLAN.md) - Full implementation plan
 
 ---
 

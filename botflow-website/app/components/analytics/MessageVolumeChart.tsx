@@ -9,11 +9,21 @@ interface MessageVolumeData {
   outbound: number;
 }
 
-export function MessageVolumeChart() {
+interface MessageVolumeChartProps {
+  initialPeriod?: '24h' | '7d' | '30d';
+}
+
+export function MessageVolumeChart({ initialPeriod = '24h' }: MessageVolumeChartProps) {
   const [data, setData] = useState<MessageVolumeData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<'24h' | '7d' | '30d'>('24h');
+  const [period, setPeriod] = useState<'24h' | '7d' | '30d'>(initialPeriod);
   const [error, setError] = useState<string | null>(null);
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+  // Update period when initialPeriod prop changes
+  useEffect(() => {
+    setPeriod(initialPeriod);
+  }, [initialPeriod]);
 
   useEffect(() => {
     fetchData();
@@ -23,10 +33,11 @@ export function MessageVolumeChart() {
     try {
       setLoading(true);
       setError(null);
+      const token = localStorage.getItem('botflow_token') || localStorage.getItem('token');
 
-      const response = await fetch(`/api/analytics/message-volume?period=${period}`, {
+      const response = await fetch(`${apiUrl}/api/analytics/message-volume?period=${period}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
 

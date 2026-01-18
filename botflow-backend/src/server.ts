@@ -118,6 +118,7 @@ import ralphRoutes from './routes/ralph.js';
 import botBuilderRoutes from './routes/bot-builder.js';
 import analyticsRoutes from './routes/analytics.js';
 import analyticsWsRoutes from './routes/analytics-ws.js';
+import aiAgentRoutes from './routes/ai-agent.js';
 
 // Register routes
 await fastify.register(healthRoutes, { prefix: '/health' });
@@ -140,6 +141,7 @@ await fastify.register(webhookRoutes, { prefix: '/webhooks' });
 await fastify.register(ralphRoutes, { prefix: '/api/ralph' });
 await fastify.register(analyticsRoutes, { prefix: '/api/analytics' });
 await fastify.register(analyticsWsRoutes, { prefix: '/api/analytics' }); // WebSocket routes
+await fastify.register(aiAgentRoutes, { prefix: '/api/bots' }); // AI Agent endpoints (Phase 3)
 
 // Start server
 const start = async () => {

@@ -10,11 +10,21 @@ interface ResponseTimeData {
   p95: number;
 }
 
-export function ResponseTimeChart() {
+interface ResponseTimeChartProps {
+  initialPeriod?: '24h' | '7d' | '30d';
+}
+
+export function ResponseTimeChart({ initialPeriod = '24h' }: ResponseTimeChartProps) {
   const [data, setData] = useState<ResponseTimeData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<'24h' | '7d' | '30d'>('24h');
+  const [period, setPeriod] = useState<'24h' | '7d' | '30d'>(initialPeriod);
   const [error, setError] = useState<string | null>(null);
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+  // Update period when initialPeriod prop changes
+  useEffect(() => {
+    setPeriod(initialPeriod);
+  }, [initialPeriod]);
 
   useEffect(() => {
     fetchData();
@@ -24,10 +34,11 @@ export function ResponseTimeChart() {
     try {
       setLoading(true);
       setError(null);
+      const token = localStorage.getItem('botflow_token') || localStorage.getItem('token');
 
-      const response = await fetch(`/api/analytics/response-times?period=${period}`, {
+      const response = await fetch(`${apiUrl}/api/analytics/response-times?period=${period}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
 

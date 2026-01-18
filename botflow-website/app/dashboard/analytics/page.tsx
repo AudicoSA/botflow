@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { MetricCard } from '@/app/components/analytics/MetricCard';
 import { AnalyticsFilters } from '@/app/components/analytics/AnalyticsFilters';
@@ -12,6 +12,15 @@ interface Bot {
   name: string;
 }
 
+interface FilterOptions {
+  dateRange: 'today' | '7days' | '30days' | 'custom';
+  startDate?: string;
+  endDate?: string;
+  botId?: string;
+  status?: 'all' | 'active' | 'resolved' | 'escalated';
+  searchQuery?: string;
+}
+
 export default function AnalyticsPage() {
   const [bots, setBots] = useState<Bot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,17 +30,29 @@ export default function AnalyticsPage() {
     avgResponseTime: 0,
     successRate: 0
   });
+  const [currentFilters, setCurrentFilters] = useState<FilterOptions>({
+    dateRange: '7days',
+    status: 'all'
+  });
 
-  useEffect(() => {
-    fetchBots();
-    fetchMetrics();
-  }, []);
+  // Convert dateRange to period format for API
+  const getPeriodFromDateRange = (dateRange: string): '24h' | '7d' | '30d' => {
+    switch (dateRange) {
+      case 'today': return '24h';
+      case '7days': return '7d';
+      case '30days': return '30d';
+      default: return '7d';
+    }
+  };
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   const fetchBots = async () => {
     try {
-      const response = await fetch('/api/bots', {
+      const token = localStorage.getItem('botflow_token') || localStorage.getItem('token');
+      const response = await fetch(`${apiUrl}/api/bots`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -44,34 +65,87 @@ export default function AnalyticsPage() {
     }
   };
 
-  const fetchMetrics = async () => {
+  const fetchMetrics = useCallback(async (filters: FilterOptions) => {
     try {
-      const response = await fetch('/api/analytics/realtime', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const token = localStorage.getItem('botflow_token') || localStorage.getItem('token');
 
-      if (response.ok) {
-        const data = await response.json();
-        setMetrics({
-          totalConversations: data.activeConversations || 0,
-          totalMessages: data.messagesPerHour || 0,
-          avgResponseTime: data.avgResponseTime || 0,
-          successRate: data.successRate || 0
+      // If a specific bot is selected, use bot-specific endpoint
+      if (filters.botId) {
+        // Calculate date range
+        let startDate: string;
+        let endDate: string = new Date().toISOString().split('T')[0];
+
+        switch (filters.dateRange) {
+          case 'today':
+            startDate = endDate;
+            break;
+          case '7days':
+            startDate = new Date(Date.now() - 7 * 24 * 3600000).toISOString().split('T')[0];
+            break;
+          case '30days':
+            startDate = new Date(Date.now() - 30 * 24 * 3600000).toISOString().split('T')[0];
+            break;
+          case 'custom':
+            startDate = filters.startDate || new Date(Date.now() - 7 * 24 * 3600000).toISOString().split('T')[0];
+            endDate = filters.endDate || endDate;
+            break;
+          default:
+            startDate = new Date(Date.now() - 7 * 24 * 3600000).toISOString().split('T')[0];
+        }
+
+        const response = await fetch(
+          `${apiUrl}/api/analytics/bot/${filters.botId}/performance?startDate=${startDate}&endDate=${endDate}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setMetrics({
+            totalConversations: data.total_conversations || 0,
+            totalMessages: data.total_messages || 0,
+            avgResponseTime: data.avg_response_time_ms || 0,
+            successRate: data.success_rate ? parseFloat(data.success_rate) : 0
+          });
+        }
+      } else {
+        // Use organization-wide realtime metrics
+        const response = await fetch(`${apiUrl}/api/analytics/realtime`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
+
+        if (response.ok) {
+          const data = await response.json();
+          setMetrics({
+            totalConversations: data.activeConversations || 0,
+            totalMessages: data.messagesPerHour || 0,
+            avgResponseTime: data.avgResponseTime || 0,
+            successRate: data.successRate || 0
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to fetch metrics:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiUrl]);
 
-  const handleFilterChange = (filters: any) => {
-    console.log('Filters changed:', filters);
-    // In a real implementation, this would refetch data with filters applied
-  };
+  useEffect(() => {
+    fetchBots();
+    fetchMetrics(currentFilters);
+  }, []);
+
+  const handleFilterChange = useCallback((filters: FilterOptions) => {
+    setCurrentFilters(filters);
+    setLoading(true);
+    fetchMetrics(filters);
+  }, [fetchMetrics]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
@@ -130,8 +204,8 @@ export default function AnalyticsPage() {
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
-          <ResponseTimeChart />
-          <MessageVolumeChart />
+          <ResponseTimeChart initialPeriod={getPeriodFromDateRange(currentFilters.dateRange)} />
+          <MessageVolumeChart initialPeriod={getPeriodFromDateRange(currentFilters.dateRange)} />
         </div>
 
         {/* Additional Info */}

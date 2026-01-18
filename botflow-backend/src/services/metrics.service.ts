@@ -232,26 +232,95 @@ export class MetricsService {
   }
 
   /**
-   * Get response time data for charts (last 24 hours)
+   * Get response time data for charts
+   * Queries conversation_metrics table for real response time data
    */
   async getResponseTimeData(organizationId: string, period: '24h' | '7d' | '30d' = '24h'): Promise<any[]> {
-    const hours = period === '24h' ? 24 : period === '7d' ? 168 : 720;
-    const data: any[] = [];
+    try {
+      const startTime = this.getStartTime(period);
 
-    const now = new Date();
-    for (let i = hours - 1; i >= 0; i--) {
-      const time = new Date(now.getTime() - i * 3600000);
-      const hour = time.toISOString().substring(0, 13);
+      // Query conversation_metrics for response time data grouped by time period
+      const { data: metrics, error } = await supabase
+        .from('conversation_metrics')
+        .select('started_at, avg_response_time_ms, p50_response_time_ms, p95_response_time_ms')
+        .eq('organization_id', organizationId)
+        .gte('started_at', startTime)
+        .order('started_at', { ascending: true });
 
-      data.push({
-        time: time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        avg: Math.round(Math.random() * 1000 + 500), // Mock data - will be replaced with real data
-        p50: Math.round(Math.random() * 800 + 400),
-        p95: Math.round(Math.random() * 2000 + 1000)
-      });
+      if (error) {
+        console.error('Failed to fetch response time data:', error);
+        return this.generateFallbackData(period);
+      }
+
+      if (!metrics || metrics.length === 0) {
+        return this.generateFallbackData(period);
+      }
+
+      // Group data by time bucket based on period
+      const bucketSize = period === '24h' ? 3600000 : // 1 hour
+                         period === '7d' ? 24 * 3600000 : // 1 day
+                         24 * 3600000; // 1 day for 30d
+
+      const buckets: Map<string, { avg: number[], p50: number[], p95: number[] }> = new Map();
+
+      for (const metric of metrics) {
+        const time = new Date(metric.started_at);
+        const bucketTime = new Date(Math.floor(time.getTime() / bucketSize) * bucketSize);
+        const key = bucketTime.toISOString();
+
+        if (!buckets.has(key)) {
+          buckets.set(key, { avg: [], p50: [], p95: [] });
+        }
+
+        const bucket = buckets.get(key)!;
+        if (metric.avg_response_time_ms) bucket.avg.push(metric.avg_response_time_ms);
+        if (metric.p50_response_time_ms) bucket.p50.push(metric.p50_response_time_ms);
+        if (metric.p95_response_time_ms) bucket.p95.push(metric.p95_response_time_ms);
+      }
+
+      // Convert to chart data
+      const data = Array.from(buckets.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([timestamp, values]) => {
+          const time = new Date(timestamp);
+          const avgFn = (arr: number[]) => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+
+          return {
+            time: period === '24h'
+              ? time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+              : time.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            avg: avgFn(values.avg),
+            p50: avgFn(values.p50),
+            p95: avgFn(values.p95)
+          };
+        });
+
+      return data.length > 0 ? data : this.generateFallbackData(period);
+    } catch (error) {
+      console.error('Error fetching response time data:', error);
+      return this.generateFallbackData(period);
     }
+  }
 
-    return data;
+  /**
+   * Generate fallback data when no real data is available
+   * Shows empty values instead of random mock data
+   */
+  private generateFallbackData(period: '24h' | '7d' | '30d'): any[] {
+    const points = period === '24h' ? 24 : period === '7d' ? 7 : 30;
+    const now = new Date();
+
+    return Array.from({ length: points }, (_, i) => {
+      const time = new Date(now.getTime() - (points - 1 - i) * (period === '24h' ? 3600000 : 24 * 3600000));
+      return {
+        time: period === '24h'
+          ? time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+          : time.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        avg: 0,
+        p50: 0,
+        p95: 0
+      };
+    });
   }
 
   /**
