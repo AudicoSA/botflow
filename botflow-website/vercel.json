@@ -4,7 +4,7 @@
   "framework": "nextjs",
   "regions": ["jnb1"],
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://api.botflow.co.za"
+    "NEXT_PUBLIC_API_URL": "https://botflow-production.up.railway.app"
   },
   "headers": [
     {
@@ -36,7 +36,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://api.botflow.co.za/api/:path*"
+      "destination": "https://botflow-production.up.railway.app/api/:path*"
     }
   ]
 }
