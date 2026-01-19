@@ -28,12 +28,14 @@ export interface Blueprint {
 
 /**
  * A node in the Blueprint (simplified, user-friendly representation)
+ * Supports both 'config' (original) and 'data' (React Flow style) for flexibility
  */
 export interface BlueprintNode {
   id: string;
-  type: string; // e.g., 'whatsapp_trigger', 'shopify_lookup', 'paystack_link'
+  type: string; // e.g., 'whatsapp_trigger', 'shopify_lookup', 'paystack_link', or category types like 'trigger', 'action', 'condition', 'integration'
   name?: string;
-  config: Record<string, any>; // Node-specific configuration
+  config?: Record<string, any>; // Node-specific configuration (original style)
+  data?: Record<string, any>; // React Flow style node data (used by AI agent services)
   position?: { x: number; y: number }; // Optional manual positioning
 }
 

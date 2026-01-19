@@ -243,8 +243,8 @@ export class NodeRecommendationEngine {
    * @param nodes - List of node types
    * @returns Category distribution
    */
-  getNodeCategoryStats(nodes: string[]): Record<string, number> {
-    const nodeLibrary = getNodeLibrary();
+  async getNodeCategoryStats(nodes: string[]): Promise<Record<string, number>> {
+    const nodeLibrary = await getNodeLibrary();
     const stats: Record<string, number> = {};
 
     for (const nodeType of nodes) {

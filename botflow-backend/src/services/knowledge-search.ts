@@ -51,7 +51,7 @@ export async function searchKnowledge(options: SearchOptions): Promise<SearchRes
             throw new Error(`OpenAI API error: ${embeddingResponse.status}`);
         }
 
-        const embeddingData = await embeddingResponse.json();
+        const embeddingData = await embeddingResponse.json() as { data: Array<{ embedding: number[] }> };
         const queryEmbedding = embeddingData.data[0].embedding;
 
         // 2. Search knowledge base using PostgreSQL function

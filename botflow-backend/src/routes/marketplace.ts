@@ -23,7 +23,8 @@ export default async function marketplaceRoutes(fastify: FastifyInstance) {
       const dbResult = await integrationMarketplaceService.listIntegrations(query);
 
       // Get n8n dynamic integrations (if not filtering by category/vertical)
-      let allIntegrations = dbResult.integrations;
+      // Use any[] to allow merging different integration types
+      let allIntegrations: any[] = dbResult.integrations;
 
       if (!query.category && !query.vertical) {
         try {

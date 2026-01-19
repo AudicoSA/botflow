@@ -108,7 +108,7 @@ export class BotBuilderService {
     description: string,
     botId: string
   ): Promise<IntentAnalysis> {
-    const nodeLibrary = getNodeLibrary();
+    const nodeLibrary = await getNodeLibrary();
     const nodes = nodeLibrary.listNodes();
     const nodeSummary = createNodeLibrarySummary(nodes);
 
@@ -161,7 +161,7 @@ export class BotBuilderService {
     intent: IntentAnalysis,
     botId: string
   ): Promise<BlueprintGenerationResult> {
-    const nodeLibrary = getNodeLibrary();
+    const nodeLibrary = await getNodeLibrary();
     const nodes = nodeLibrary.listNodes();
 
     // Create detailed node information for Blueprint generation
@@ -215,7 +215,7 @@ export class BotBuilderService {
     }
 
     // Validate the generated Blueprint
-    const validation = this.compiler.validate(blueprint);
+    const validation = await this.compiler.validate(blueprint);
 
     // Calculate confidence score
     const confidence = this.calculateConfidence(blueprint, validation);
@@ -305,7 +305,7 @@ export class BotBuilderService {
     messages: Array<{ role: 'user' | 'assistant'; content: string }>,
     botId: string
   ): Promise<ConversationalResponse> {
-    const nodeLibrary = getNodeLibrary();
+    const nodeLibrary = await getNodeLibrary();
     const nodes = nodeLibrary.listNodes();
     const nodeSummary = createNodeLibrarySummary(nodes);
 

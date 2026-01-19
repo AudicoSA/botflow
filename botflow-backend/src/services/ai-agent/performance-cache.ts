@@ -649,7 +649,13 @@ export class PerformanceCache {
 
       // Cleanup DB cache
       if (this.config.useDbCache) {
-        supabaseAdmin.rpc('cleanup_expired_cache').catch(() => {});
+        void (async () => {
+          try {
+            await supabaseAdmin.rpc('cleanup_expired_cache');
+          } catch {
+            // Ignore cleanup errors
+          }
+        })();
       }
     }, 60 * 1000); // Every minute
   }

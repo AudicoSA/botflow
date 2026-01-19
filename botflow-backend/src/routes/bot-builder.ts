@@ -66,8 +66,11 @@ const OptimizeBodySchema = z.object({
     bot_id: z.string(),
     version: z.string(),
     name: z.string(),
+    description: z.string().optional(),
     nodes: z.array(z.any()),
-    edges: z.array(z.any())
+    edges: z.array(z.any()),
+    variables: z.record(z.string()).optional().default({}),
+    credentials: z.array(z.any()).optional().default([])
   })
 });
 
@@ -254,7 +257,8 @@ const botBuilderRoutes: FastifyPluginAsync = async (fastify) => {
 
         // Continue conversation
         const service = getBotBuilderService();
-        const result = await service.conversationalBuilder(messages, botId);
+        const typedMessages = messages as Array<{ role: 'user' | 'assistant'; content: string }>;
+        const result = await service.conversationalBuilder(typedMessages, botId);
 
         return reply.send({
           success: true,
@@ -317,7 +321,8 @@ const botBuilderRoutes: FastifyPluginAsync = async (fastify) => {
 
         // Generate optimizations
         const service = getBotBuilderService();
-        const suggestions = await service.generateOptimizations(blueprint);
+        const typedBlueprint = blueprint as import('../types/workflow.js').Blueprint;
+        const suggestions = await service.generateOptimizations(typedBlueprint);
 
         return reply.send({
           success: true,

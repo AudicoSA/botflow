@@ -82,29 +82,29 @@ export class MetricsService {
       // Update or create conversation metrics
       const { data: existing } = await supabase
         .from('conversation_metrics')
-        .select('id')
+        .select('*')
         .eq('conversation_id', metric.conversation_id)
         .single();
 
       if (existing) {
-        // Update existing metrics
+        // Update existing metrics - fetch current values and increment
         await supabase
           .from('conversation_metrics')
           .update({
-            total_messages: supabase.raw('total_messages + 1'),
+            total_messages: (existing.total_messages || 0) + 1,
             successful_responses: metric.success
-              ? supabase.raw('successful_responses + 1')
-              : supabase.raw('successful_responses'),
+              ? (existing.successful_responses || 0) + 1
+              : (existing.successful_responses || 0),
             failed_responses: !metric.success
-              ? supabase.raw('failed_responses + 1')
-              : supabase.raw('failed_responses'),
-            tokens_used: supabase.raw(`tokens_used + ${metric.tokens_used}`),
+              ? (existing.failed_responses || 0) + 1
+              : (existing.failed_responses || 0),
+            tokens_used: (existing.tokens_used || 0) + metric.tokens_used,
             knowledge_base_hits: metric.knowledge_base_hit
-              ? supabase.raw('knowledge_base_hits + 1')
-              : supabase.raw('knowledge_base_hits'),
+              ? (existing.knowledge_base_hits || 0) + 1
+              : (existing.knowledge_base_hits || 0),
             knowledge_base_misses: !metric.knowledge_base_hit
-              ? supabase.raw('knowledge_base_misses + 1')
-              : supabase.raw('knowledge_base_misses'),
+              ? (existing.knowledge_base_misses || 0) + 1
+              : (existing.knowledge_base_misses || 0),
             updated_at: new Date().toISOString()
           })
           .eq('id', existing.id);

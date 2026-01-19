@@ -192,7 +192,7 @@ export class N8nMarketplaceService {
         throw new Error(`n8n API returned ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as { nodes?: N8nNode[] };
       return data.nodes || [];
     } catch (error) {
       logger.error({ error }, 'Failed to fetch nodes from n8n HTTP API');

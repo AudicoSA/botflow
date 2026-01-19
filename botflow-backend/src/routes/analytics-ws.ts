@@ -2,9 +2,10 @@ import { FastifyPluginAsync } from 'fastify';
 import { metricsService } from '../services/metrics.service.js';
 import { supabase } from '../config/supabase.js';
 import { redis } from '../config/redis.js';
+import type { WebSocket } from 'ws';
 
 interface WebSocketClient {
-  socket: any;
+  socket: WebSocket;
   organizationId: string;
   userId: string;
 }
@@ -16,14 +17,15 @@ const analyticsWebSocketRoutes: FastifyPluginAsync = async (fastify) => {
    * WebSocket endpoint for real-time analytics streaming
    * GET /api/analytics/stream?token=<jwt>
    */
-  fastify.get('/stream', { websocket: true }, async (connection, req) => {
+  fastify.get('/stream', { websocket: true }, async (socket: WebSocket, req) => {
+    // Use 'socket' directly as the WebSocket connection (Fastify WebSocket v10+)
     console.log('Client attempting to connect to analytics stream');
 
     // Authenticate connection
     const token = (req.query as any).token as string;
     if (!token) {
       console.log('No token provided, closing connection');
-      connection.socket.close(1008, 'Authentication required');
+      socket.close(1008, 'Authentication required');
       return;
     }
 
@@ -35,7 +37,7 @@ const analyticsWebSocketRoutes: FastifyPluginAsync = async (fastify) => {
       console.log('User authenticated:', user.id);
     } catch (error) {
       console.error('JWT verification failed:', error);
-      connection.socket.close(1008, 'Invalid token');
+      socket.close(1008, 'Invalid token');
       return;
     }
 
@@ -48,7 +50,7 @@ const analyticsWebSocketRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (membershipError || !membership) {
       console.error('Organization not found for user:', user.id);
-      connection.socket.close(1008, 'Organization not found');
+      socket.close(1008, 'Organization not found');
       return;
     }
 
@@ -57,7 +59,7 @@ const analyticsWebSocketRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Add client to set
     const client: WebSocketClient = {
-      socket: connection.socket,
+      socket: socket,
       organizationId,
       userId: user.id
     };
@@ -66,7 +68,7 @@ const analyticsWebSocketRoutes: FastifyPluginAsync = async (fastify) => {
     // Send initial metrics
     try {
       const metrics = await metricsService.getRealtimeMetrics(organizationId);
-      connection.socket.send(JSON.stringify({
+      socket.send(JSON.stringify({
         type: 'metrics_update',
         data: {
           activeConversations: metrics.activeConversations,
@@ -85,8 +87,8 @@ const analyticsWebSocketRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         const metrics = await metricsService.getRealtimeMetrics(organizationId);
 
-        if (connection.socket.readyState === 1) { // OPEN
-          connection.socket.send(JSON.stringify({
+        if (socket.readyState === 1) { // OPEN
+          socket.send(JSON.stringify({
             type: 'metrics_update',
             data: {
               activeConversations: metrics.activeConversations,
@@ -103,33 +105,39 @@ const analyticsWebSocketRoutes: FastifyPluginAsync = async (fastify) => {
     }, 5000);
 
     // Listen for Redis pub/sub events for real-time conversation updates
-    const subscriber = redis.duplicate();
-    await subscriber.connect();
+    let subscriber: typeof redis | null = null;
+    if (redis) {
+      subscriber = redis.duplicate();
 
-    await subscriber.subscribe(`org:${organizationId}:conversations`, (message) => {
-      try {
-        const data = JSON.parse(message);
-        if (connection.socket.readyState === 1) {
-          connection.socket.send(JSON.stringify({
-            type: 'new_message',
-            data,
-            timestamp: new Date().toISOString()
-          }));
+      // Subscribe to organization channel
+      await subscriber.subscribe(`org:${organizationId}:conversations`);
+
+      // Listen for messages
+      subscriber.on('message', (channel: string, message: string) => {
+        try {
+          const data = JSON.parse(message);
+          if (socket.readyState === 1) {
+            socket.send(JSON.stringify({
+              type: 'new_message',
+              data,
+              timestamp: new Date().toISOString()
+            }));
+          }
+        } catch (error) {
+          console.error('Failed to broadcast conversation update:', error);
         }
-      } catch (error) {
-        console.error('Failed to broadcast conversation update:', error);
-      }
-    });
+      });
+    }
 
     // Handle incoming messages from client
-    connection.socket.on('message', (message: any) => {
+    socket.on('message', (message: any) => {
       try {
         const data = JSON.parse(message.toString());
         console.log('Received message from client:', data);
 
         // Handle ping/pong for connection health
         if (data.type === 'ping') {
-          connection.socket.send(JSON.stringify({
+          socket.send(JSON.stringify({
             type: 'pong',
             timestamp: new Date().toISOString()
           }));
@@ -140,7 +148,7 @@ const analyticsWebSocketRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     // Handle connection close
-    connection.socket.on('close', async () => {
+    socket.on('close', async () => {
       console.log('Client disconnected from analytics stream:', {
         userId: user.id,
         organizationId
@@ -149,16 +157,18 @@ const analyticsWebSocketRoutes: FastifyPluginAsync = async (fastify) => {
       clearInterval(updateInterval);
       clients.delete(client);
 
-      try {
-        await subscriber.unsubscribe(`org:${organizationId}:conversations`);
-        await subscriber.quit();
-      } catch (error) {
-        console.error('Failed to cleanup subscriber:', error);
+      if (subscriber) {
+        try {
+          await subscriber.unsubscribe(`org:${organizationId}:conversations`);
+          await subscriber.quit();
+        } catch (error) {
+          console.error('Failed to cleanup subscriber:', error);
+        }
       }
     });
 
     // Handle connection errors
-    connection.socket.on('error', (error: any) => {
+    socket.on('error', (error: any) => {
       console.error('WebSocket error:', error);
     });
   });

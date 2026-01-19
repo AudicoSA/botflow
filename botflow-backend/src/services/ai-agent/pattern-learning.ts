@@ -300,7 +300,7 @@ export class PatternLearningService {
       const patterns = await this.extractPatterns({ limit: 100 });
 
       // Score and rank patterns based on similarity to intent
-      const scoredPatterns = patterns.map(pattern => ({
+      const scoredPatterns: PatternSuggestion[] = patterns.map(pattern => ({
         pattern,
         relevanceScore: this.calculatePatternRelevance(pattern, intent, intentSignature),
         reasoning: this.generateReasoningText(pattern, intent)
@@ -607,10 +607,14 @@ export class PatternLearningService {
     }));
 
     return {
+      bot_id: '', // Will be set when deployed
+      version: '1.0.0',
       name: `${pattern.workflowType || 'Custom'} Workflow`,
       description: `Generated from successful pattern (${pattern.usageCount} uses, ${Math.round(pattern.successRate)}% success)`,
       nodes,
-      edges
+      edges,
+      variables: {},
+      credentials: []
     };
   }
 
