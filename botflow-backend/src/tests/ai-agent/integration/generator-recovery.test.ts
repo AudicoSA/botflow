@@ -223,11 +223,12 @@ describe('WorkflowGenerator + ErrorRecovery Integration', () => {
 
   describe('Error Analysis', () => {
     it('should provide suggestions for configuration errors', async () => {
-      const { ErrorRecoveryService, ErrorType } = await import('../../../services/ai-agent/error-recovery.js');
+      const { ErrorRecoveryService } = await import('../../../services/ai-agent/error-recovery.js');
+      type ErrorType = 'validation' | 'generation' | 'execution' | 'integration' | 'configuration';
 
       const service = new ErrorRecoveryService();
 
-      const error: { type: typeof ErrorType[keyof typeof ErrorType]; message: string; context?: Record<string, unknown> } = {
+      const error: { type: ErrorType; message: string; context?: Record<string, unknown> } = {
         type: 'configuration',
         message: 'Missing required field: message'
       };

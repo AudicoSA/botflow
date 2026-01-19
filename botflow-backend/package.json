@@ -58,10 +58,12 @@
         "zod": "^3.22.4"
     },
     "devDependencies": {
+        "@types/jsonwebtoken": "^9.0.10",
         "@types/node": "^20.11.5",
         "@typescript-eslint/eslint-plugin": "^6.19.0",
         "@typescript-eslint/parser": "^6.19.0",
         "eslint": "^8.56.0",
+        "jsonwebtoken": "^9.0.3",
         "tsx": "^4.7.0",
         "typescript": "^5.3.3",
         "vitest": "^1.2.0"

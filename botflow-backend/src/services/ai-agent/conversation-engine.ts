@@ -177,8 +177,15 @@ export class ConversationEngine {
 
       return response;
     } catch (error) {
-      // Handle errors gracefully
-      const errorMessage = 'I ran into a problem processing that. Could you try rephrasing what you want your bot to do?';
+      // Log the actual error for debugging
+      const errorDetails = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      logger.error({ error: errorDetails, stack: errorStack }, 'AI Agent conversation error');
+
+      // Handle errors gracefully with more specific message
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `I ran into a problem: ${errorDetails}. Could you try rephrasing what you want your bot to do?`
+        : 'I ran into a problem processing that. Could you try rephrasing what you want your bot to do?';
 
       this.contextManager.addMessage(context, 'assistant', errorMessage);
       this.contextManager.transitionState(context, 'error');

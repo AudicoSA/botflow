@@ -74,8 +74,9 @@ interface DetailedMetricsResponse {
   };
   cache: {
     hitRate: number;
-    hits: number;
-    misses: number;
+    totalEntries: number;
+    memoryCacheSize: number;
+    dbCacheSize: number;
   };
   sessions: {
     active: number;
@@ -107,7 +108,7 @@ export async function aiAgentHealthRoutes(fastify: FastifyInstance) {
     const contextManager = getContextManager();
 
     const stats = metrics.getStats();
-    const cacheStats = cache.getStats();
+    const cacheStats = await cache.getStats();
     const sessionStats = contextManager.getStats();
 
     const warnings: string[] = [];
@@ -115,7 +116,7 @@ export async function aiAgentHealthRoutes(fastify: FastifyInstance) {
 
     // Determine cache health
     let cacheStatus: HealthStatus = 'healthy';
-    if (cacheStats.hitRate < 0.5 && cacheStats.size > 0) {
+    if (cacheStats.hitRate < 0.5 && cacheStats.totalEntries > 0) {
       cacheStatus = 'degraded';
       warnings.push('Cache hit rate below 50%');
     }
@@ -159,7 +160,7 @@ export async function aiAgentHealthRoutes(fastify: FastifyInstance) {
         cache: {
           status: cacheStatus,
           hitRate: cacheStats.hitRate,
-          size: cacheStats.size
+          size: cacheStats.totalEntries
         },
         contextManager: {
           status: contextStatus,
@@ -193,7 +194,7 @@ export async function aiAgentHealthRoutes(fastify: FastifyInstance) {
     const contextManager = getContextManager();
 
     const stats = metrics.getStats();
-    const cacheStats = cache.getStats();
+    const cacheStats = await cache.getStats();
     const sessionStats = contextManager.getStats();
 
     const response: DetailedMetricsResponse = {
@@ -221,8 +222,9 @@ export async function aiAgentHealthRoutes(fastify: FastifyInstance) {
       },
       cache: {
         hitRate: cacheStats.hitRate,
-        hits: cacheStats.hits,
-        misses: cacheStats.misses
+        totalEntries: cacheStats.totalEntries,
+        memoryCacheSize: cacheStats.memoryCacheSize,
+        dbCacheSize: cacheStats.dbCacheSize
       },
       sessions: {
         active: sessionStats.activeSessions,
@@ -289,16 +291,16 @@ export async function aiAgentHealthRoutes(fastify: FastifyInstance) {
    */
   fastify.get('/cache/status', async (request, reply) => {
     const cacheWarmer = getCacheWarmer();
-    const status = cacheWarmer.getStatus();
+    const status = await cacheWarmer.getStatusAsync();
 
     return reply.send({
       isWarming: status.isWarming,
       lastWarmUp: status.lastWarmUp?.toISOString() || null,
       cache: {
-        size: status.cacheStats.size,
+        totalEntries: status.cacheStats.totalEntries,
         hitRate: status.cacheStats.hitRate,
-        hits: status.cacheStats.hits,
-        misses: status.cacheStats.misses
+        memoryCacheSize: status.cacheStats.memoryCacheSize,
+        dbCacheSize: status.cacheStats.dbCacheSize
       }
     });
   });
@@ -311,7 +313,7 @@ export async function aiAgentHealthRoutes(fastify: FastifyInstance) {
     onRequest: [fastify.authenticate]
   }, async (request, reply) => {
     const cache = getPerformanceCache();
-    cache.clear();
+    await cache.clearAll();
 
     return reply.send({
       message: 'Cache cleared successfully'

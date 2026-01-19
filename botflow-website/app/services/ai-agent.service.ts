@@ -76,7 +76,7 @@ const fetchWithRetry = async (
 interface ChatResponse {
   message: string;
   sessionId: string;
-  state: 'idle' | 'gathering' | 'confirming' | 'refining' | 'deploying' | 'complete';
+  state: 'idle' | 'gathering' | 'confirming' | 'refining' | 'deploying' | 'complete' | 'error';
   workflow?: Blueprint;
   actions: AgentAction[];
   suggestions?: string[];
