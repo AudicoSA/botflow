@@ -1227,12 +1227,10 @@ runTests();
 **Error:** `ENOENT: no such file or directory, open '/app/dist/data/node-library.json'`
 **Solution:** Added `scripts/copy-data.js` to copy data files from `src/data` to `dist/data` during build.
 
-### Issue 2: Unknown Node Type - send_message
-**Status:** 🔴 Open
+### Issue 2: Unknown Node Type - send_message (FIXED)
+**Status:** ✅ Fixed
 **Error:** "I need a bit more info: Unknown node type: send_message"
-**Root Cause:** The node library doesn't have a `send_message` node type, or the intent parser is generating invalid node references.
-**File to check:** `botflow-backend/src/data/node-library.json`
-**Action:** Add missing node types or fix intent parser to use correct node names.
+**Solution:** Added `send_message`, `ai_response`, `human_handoff`, `opencart_lookup`, `shiplogic_track`, `order_lookup` nodes to node-library.json. Also added alias support to NodeLibrary service.
 
 ### Issue 3: Request Timeout After Initial Response
 **Status:** 🔴 Open
@@ -1251,6 +1249,32 @@ runTests();
 **Status:** ✅ Fixed
 **Error:** UI showed "Error" state but type wasn't recognized
 **Solution:** Added `'error'` to `ConversationState` type in frontend.
+
+### Issue 5: Frontend Crash - Cannot Read 'label' of Undefined
+**Status:** 🔴 Open - HIGH PRIORITY
+**Error:** `Uncaught TypeError: Cannot read properties of undefined (reading 'label')`
+**Location:** `page-06ee0f546300050...xVrXiVnmgdgPYFwsf:1:17866`
+**Symptoms:**
+- Application error on ai-builder page
+- Console shows "Workflow generated: Product Inquiry and Shipping Workflow" before crash
+- Crash occurs when trying to render the workflow preview
+**Root Cause:** Frontend is trying to access `.label` on a node/edge that is undefined. The workflow was generated successfully but the UI component expects a different structure.
+**Files to investigate:**
+- `botflow-website/app/dashboard/bots/[id]/ai-builder/page.tsx`
+- `botflow-website/app/dashboard/bots/[id]/ai-builder/WorkflowPreview.tsx` (if exists)
+- Check how workflow nodes are being mapped/rendered
+**Action:**
+1. Add null checks before accessing node properties
+2. Ensure workflow structure from backend matches frontend expectations
+3. Add error boundaries to prevent full page crash
+
+### Issue 6: Multiple 404 Errors
+**Status:** 🔴 Open
+**Errors:**
+- `/dashboard/settings? rsc=18q47:1` - 404
+- `botflow-production.u...93f3-9e99c7dbcla2:1` - 404
+**Root Cause:** RSC (React Server Component) requests failing, possibly stale cache or deployment mismatch
+**Action:** May resolve after fixing Issue 5, otherwise investigate Vercel deployment
 
 ---
 

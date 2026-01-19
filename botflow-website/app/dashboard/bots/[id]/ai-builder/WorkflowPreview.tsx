@@ -34,17 +34,42 @@ const nodeTypes = {
   integration: IntegrationNode,
 };
 
+// Helper to get node label from either data or config structure
+function getNodeLabel(node: WorkflowNode): string {
+  // Try data.label first (React Flow style)
+  if (node.data?.label) return node.data.label;
+  // Try config (backend Blueprint style)
+  if ((node as any).config?.label) return (node as any).config.label;
+  // Try name field
+  if ((node as any).name) return (node as any).name;
+  // Fallback to formatted type
+  return node.type?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Unknown';
+}
+
+// Helper to normalize node data for React Flow
+function normalizeNodeData(node: WorkflowNode): Record<string, unknown> {
+  const label = getNodeLabel(node);
+  // Merge data and config, preferring data
+  return {
+    label,
+    ...(node as any).config,
+    ...node.data,
+  };
+}
+
 // Convert Blueprint nodes to React Flow nodes with auto-layout
 function convertToReactFlowNodes(nodes: WorkflowNode[]): Node[] {
+  if (!nodes || !Array.isArray(nodes)) return [];
+
   // If nodes already have positions, use them
   const hasPositions = nodes.some((n) => n.position && n.position.x !== 0);
 
   if (hasPositions) {
     return nodes.map((node) => ({
       id: node.id,
-      type: node.type,
-      position: node.position,
-      data: node.data,
+      type: node.type || 'action',
+      position: node.position || { x: 200, y: 50 },
+      data: normalizeNodeData(node),
     }));
   }
 
@@ -55,12 +80,12 @@ function convertToReactFlowNodes(nodes: WorkflowNode[]): Node[] {
 
   return nodes.map((node, index) => ({
     id: node.id,
-    type: node.type,
+    type: node.type || 'action',
     position: {
       x: START_X,
       y: START_Y + index * VERTICAL_SPACING,
     },
-    data: node.data,
+    data: normalizeNodeData(node),
   }));
 }
 
@@ -145,7 +170,7 @@ export function WorkflowPreview({
           <div>
             <h2 className="font-semibold text-gray-900">{workflow.name || 'Generated Workflow'}</h2>
             <p className="text-xs text-gray-500">
-              {workflow.nodes.length} nodes, {workflow.edges.length} connections
+              {workflow.nodes?.length || 0} nodes, {workflow.edges?.length || 0} connections
             </p>
           </div>
           <div className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -172,7 +197,7 @@ export function WorkflowPreview({
         <div className="px-4 py-3">
           <h3 className="text-sm font-semibold text-gray-900 mb-2">Workflow Steps</h3>
           <div className="space-y-1.5 max-h-32 overflow-y-auto">
-            {workflow.nodes.map((node, index) => (
+            {workflow.nodes?.map((node, index) => (
               <div key={node.id} className="flex items-center text-sm">
                 <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium mr-2 ${
                   node.type === 'trigger' ? 'bg-green-100 text-green-700' :
@@ -182,7 +207,7 @@ export function WorkflowPreview({
                 }`}>
                   {index + 1}
                 </span>
-                <span className="text-gray-700">{node.data.label}</span>
+                <span className="text-gray-700">{getNodeLabel(node)}</span>
               </div>
             ))}
           </div>
