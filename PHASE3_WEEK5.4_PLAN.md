@@ -1232,41 +1232,46 @@ runTests();
 **Error:** "I need a bit more info: Unknown node type: send_message"
 **Solution:** Added `send_message`, `ai_response`, `human_handoff`, `opencart_lookup`, `shiplogic_track`, `order_lookup` nodes to node-library.json. Also added alias support to NodeLibrary service.
 
-### Issue 3: Request Timeout After Initial Response
-**Status:** 🔴 Open
+### Issue 3: Request Timeout After Initial Response - CRITICAL
+**Status:** 🔴 Open - HIGH PRIORITY
 **Error:** "Request timed out. Please try again."
-**Root Cause:** The AI agent is taking too long to process subsequent messages, causing the 30-second timeout to trigger.
-**Potential causes:**
-- OpenAI API response is slow
-- Intent parsing is hitting retries
-- Workflow generation is complex
-**Action:** Investigate and potentially:
-- Increase timeout for complex operations
-- Add streaming responses
-- Optimize intent parsing
+**Screenshot Evidence:** User provided catalog URL, then got timeout error
+**Symptoms:**
+- First message works (state changes to "Gathering")
+- AI asks clarifying question ("Please provide: **Catalog URL**")
+- User provides URL (www.audicoonline.co.za)
+- TIMEOUT occurs - "Request timed out. Please try again."
+- Retry also fails
+
+**Root Cause Investigation Needed:**
+1. Check backend logs for what happens after receiving the URL
+2. Is OpenAI API call taking too long?
+3. Is intent parsing failing and retrying multiple times?
+4. Is workflow generation timing out?
+
+**Files to investigate:**
+- `botflow-backend/src/services/ai-agent/conversation-engine.ts` - Main processing logic
+- `botflow-backend/src/services/ai-agent/intent-parser.ts` - May be slow/retrying
+- `botflow-backend/src/services/ai-agent/workflow-generator.ts` - GPT calls for generation
+- `botflow-backend/src/routes/ai-agent.ts` - API timeout settings
+
+**Potential fixes:**
+1. Increase API timeout from 30s to 60s for chat endpoint
+2. Add progress indicators / streaming responses
+3. Optimize intent parsing (reduce retries, simplify prompts)
+4. Add caching for repeated operations
+5. Profile backend to find bottleneck
 
 ### Issue 4: Frontend Error State Type Mismatch (FIXED)
 **Status:** ✅ Fixed
 **Error:** UI showed "Error" state but type wasn't recognized
 **Solution:** Added `'error'` to `ConversationState` type in frontend.
 
-### Issue 5: Frontend Crash - Cannot Read 'label' of Undefined
-**Status:** 🔴 Open - HIGH PRIORITY
+### Issue 5: Frontend Crash - Cannot Read 'label' of Undefined (PARTIALLY FIXED)
+**Status:** 🟡 Partial Fix Applied
 **Error:** `Uncaught TypeError: Cannot read properties of undefined (reading 'label')`
-**Location:** `page-06ee0f546300050...xVrXiVnmgdgPYFwsf:1:17866`
-**Symptoms:**
-- Application error on ai-builder page
-- Console shows "Workflow generated: Product Inquiry and Shipping Workflow" before crash
-- Crash occurs when trying to render the workflow preview
-**Root Cause:** Frontend is trying to access `.label` on a node/edge that is undefined. The workflow was generated successfully but the UI component expects a different structure.
-**Files to investigate:**
-- `botflow-website/app/dashboard/bots/[id]/ai-builder/page.tsx`
-- `botflow-website/app/dashboard/bots/[id]/ai-builder/WorkflowPreview.tsx` (if exists)
-- Check how workflow nodes are being mapped/rendered
-**Action:**
-1. Add null checks before accessing node properties
-2. Ensure workflow structure from backend matches frontend expectations
-3. Add error boundaries to prevent full page crash
+**Fix Applied:** Added `getNodeLabel()` helper and null checks in WorkflowPreview.tsx
+**Still needs testing:** Verify fix works after Vercel deployment
 
 ### Issue 6: Multiple 404 Errors
 **Status:** 🔴 Open
@@ -1274,7 +1279,78 @@ runTests();
 - `/dashboard/settings? rsc=18q47:1` - 404
 - `botflow-production.u...93f3-9e99c7dbcla2:1` - 404
 **Root Cause:** RSC (React Server Component) requests failing, possibly stale cache or deployment mismatch
-**Action:** May resolve after fixing Issue 5, otherwise investigate Vercel deployment
+**Action:** May resolve after other fixes, otherwise investigate Vercel deployment
+
+---
+
+## Comprehensive AI Builder Checklist
+
+### Backend Investigation Required
+
+- [ ] **Check Railway logs** during a failed request to see where it hangs
+- [ ] **Profile OpenAI API calls** - measure response times for intent parsing and workflow generation
+- [ ] **Test conversation-engine.ts locally** with the exact user input that causes timeout
+- [ ] **Check Redis connection** - session state may be failing
+- [ ] **Verify node-library.json loads correctly** in production (issue 1 was fixed but verify)
+- [ ] **Test with simple prompts** vs complex prompts to isolate timeout cause
+
+### Frontend Investigation Required
+
+- [ ] **Verify WorkflowPreview fix deployed** to Vercel
+- [ ] **Check CustomNodes.tsx** - all 4 node types (TriggerNode, ActionNode, ConditionNode, IntegrationNode) must handle missing data gracefully
+- [ ] **Add error boundary** around WorkflowPreview component
+- [ ] **Check useAIAgent hook** - verify state transitions are correct
+- [ ] **Test ChatPanel** - ensure it handles error responses properly
+- [ ] **Verify Blueprint type** in ai-agent.service.ts matches backend response
+
+### API Contract Verification
+
+- [ ] **Compare backend Blueprint response** with frontend Blueprint type
+- [ ] **Check node structure**: Backend uses `config`, frontend expects `data.label`
+- [ ] **Verify all required fields** are present in API responses
+- [ ] **Test each endpoint manually** with curl/Postman:
+  - `POST /api/bots/:botId/agent/chat`
+  - `POST /api/bots/:botId/agent/generate`
+  - `POST /api/bots/:botId/agent/refine`
+  - `GET /api/bots/:botId/agent/session`
+
+### Timeout Investigation
+
+- [ ] **Current timeout**: 30 seconds in frontend `fetchWithTimeout`
+- [ ] **Measure actual processing time** for a typical request
+- [ ] **Identify bottleneck**:
+  - Intent parsing (1-2 GPT calls)
+  - Workflow generation (1 GPT call)
+  - Template matching
+  - Database operations
+- [ ] **Consider streaming** for long operations
+- [ ] **Add progress callback** to show user something is happening
+
+### Testing Scenarios
+
+1. **Simple prompt**: "Answer FAQs about my business"
+2. **Medium prompt**: "Track orders from my Shopify store"
+3. **Complex prompt**: "Receive WhatsApp messages, use AI to answer questions, connect to OpenCart for stock/recommendations, track orders via ShipLogic, handoff to human when needed"
+4. **Follow-up messages**: Test the conversation flow after initial response
+5. **URL input**: Test providing URLs when asked (this is where timeout occurs)
+
+### Files to Review
+
+**Backend:**
+- `src/services/ai-agent/conversation-engine.ts` - Main orchestrator
+- `src/services/ai-agent/intent-parser.ts` - GPT intent parsing
+- `src/services/ai-agent/workflow-generator.ts` - GPT workflow generation
+- `src/services/ai-agent/context-manager.ts` - Session/state management
+- `src/routes/ai-agent.ts` - API endpoints
+- `src/data/node-library.json` - Node definitions
+
+**Frontend:**
+- `app/dashboard/bots/[id]/ai-builder/page.tsx` - Main page
+- `app/dashboard/bots/[id]/ai-builder/WorkflowPreview.tsx` - Workflow display
+- `app/dashboard/bots/[id]/ai-builder/ChatPanel.tsx` - Chat interface
+- `app/dashboard/bots/[id]/ai-builder/MessageBubble.tsx` - Message rendering
+- `app/hooks/useAIAgent.ts` - State management hook
+- `app/services/ai-agent.service.ts` - API client
 
 ---
 
