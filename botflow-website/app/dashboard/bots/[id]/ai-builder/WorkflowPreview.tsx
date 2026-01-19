@@ -21,7 +21,7 @@ import { ConversationState } from '../../../../hooks/useAIAgent';
 interface WorkflowPreviewProps {
   workflow: Blueprint;
   state: ConversationState;
-  onDeploy: () => Promise<void>;
+  onDeploy: () => Promise<boolean>;
   onModify: () => void;
   isDeploying: boolean;
 }
