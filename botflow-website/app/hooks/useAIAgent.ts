@@ -38,7 +38,7 @@ interface UseAIAgentReturn {
   selectSuggestion: (suggestion: string) => Promise<void>;
   executeAction: (action: AgentAction) => Promise<void>;
   reset: () => void;
-  deploy: () => Promise<void>;
+  deploy: () => Promise<boolean>;
   undo: () => Promise<void>;
 }
 
