@@ -46,7 +46,8 @@
       "Bash(npm search:*)",
       "Bash(npx vercel@latest:*)",
       "Bash(git fetch:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Read(//c/Users/kenny/Downloads/**)"
     ],
     "additionalDirectories": [
       "\\tmp"

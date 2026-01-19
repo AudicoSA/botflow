@@ -10,7 +10,8 @@
     },
     "scripts": {
         "dev": "tsx watch src/server.ts",
-        "build": "tsc || true",
+        "build": "tsc && npm run copy-data || npm run copy-data",
+        "copy-data": "node scripts/copy-data.js",
         "start": "node dist/server.js",
         "lint": "eslint src --ext .ts",
         "test": "vitest",
