@@ -21,6 +21,7 @@ const __dirname = dirname(__filename);
 
 export class NodeLibrary {
   private nodes: Map<string, NodeDefinition> = new Map();
+  private aliases: Map<string, string> = new Map(); // alias -> node type
   private loaded: boolean = false;
 
   /**
@@ -36,11 +37,19 @@ export class NodeLibrary {
 
       // Load nodes into memory
       for (const [type, definition] of Object.entries(data.nodes)) {
-        this.nodes.set(type, definition as NodeDefinition);
+        const nodeDef = definition as NodeDefinition;
+        this.nodes.set(type, nodeDef);
+
+        // Also register any aliases
+        if (nodeDef.aliases && Array.isArray(nodeDef.aliases)) {
+          for (const alias of nodeDef.aliases) {
+            this.aliases.set(alias, type);
+          }
+        }
       }
 
       this.loaded = true;
-      console.log(`✅ Node Library loaded: ${this.nodes.size} nodes`);
+      console.log(`✅ Node Library loaded: ${this.nodes.size} nodes, ${this.aliases.size} aliases`);
     } catch (error) {
       console.error('Failed to load node library:', error);
       throw new Error('Node library initialization failed');
@@ -48,11 +57,21 @@ export class NodeLibrary {
   }
 
   /**
-   * Get a node definition by type
+   * Get a node definition by type (also checks aliases)
    */
   getNode(type: string): NodeDefinition | undefined {
     this.ensureLoaded();
-    return this.nodes.get(type);
+    // First try direct lookup
+    let node = this.nodes.get(type);
+    if (node) return node;
+
+    // Then check aliases
+    const aliasTarget = this.aliases.get(type);
+    if (aliasTarget) {
+      return this.nodes.get(aliasTarget);
+    }
+
+    return undefined;
   }
 
   /**
@@ -70,11 +89,11 @@ export class NodeLibrary {
   }
 
   /**
-   * Check if a node type exists
+   * Check if a node type exists (also checks aliases)
    */
   hasNode(type: string): boolean {
     this.ensureLoaded();
-    return this.nodes.has(type);
+    return this.nodes.has(type) || this.aliases.has(type);
   }
 
   /**

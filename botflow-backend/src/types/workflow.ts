@@ -73,6 +73,7 @@ export interface NodeDefinition {
   name: string;
   description: string;
   icon?: string;
+  aliases?: string[]; // Alternative names for this node type
   inputs: NodeInput[];
   outputs: NodeOutput[];
   n8n_type: string; // The actual n8n node type (e.g., 'n8n-nodes-base.webhook')

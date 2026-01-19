@@ -1220,6 +1220,40 @@ runTests();
 
 ---
 
+## Known Issues (Production Testing)
+
+### Issue 1: Missing node-library.json in Production (FIXED)
+**Status:** ✅ Fixed
+**Error:** `ENOENT: no such file or directory, open '/app/dist/data/node-library.json'`
+**Solution:** Added `scripts/copy-data.js` to copy data files from `src/data` to `dist/data` during build.
+
+### Issue 2: Unknown Node Type - send_message
+**Status:** 🔴 Open
+**Error:** "I need a bit more info: Unknown node type: send_message"
+**Root Cause:** The node library doesn't have a `send_message` node type, or the intent parser is generating invalid node references.
+**File to check:** `botflow-backend/src/data/node-library.json`
+**Action:** Add missing node types or fix intent parser to use correct node names.
+
+### Issue 3: Request Timeout After Initial Response
+**Status:** 🔴 Open
+**Error:** "Request timed out. Please try again."
+**Root Cause:** The AI agent is taking too long to process subsequent messages, causing the 30-second timeout to trigger.
+**Potential causes:**
+- OpenAI API response is slow
+- Intent parsing is hitting retries
+- Workflow generation is complex
+**Action:** Investigate and potentially:
+- Increase timeout for complex operations
+- Add streaming responses
+- Optimize intent parsing
+
+### Issue 4: Frontend Error State Type Mismatch (FIXED)
+**Status:** ✅ Fixed
+**Error:** UI showed "Error" state but type wasn't recognized
+**Solution:** Added `'error'` to `ConversationState` type in frontend.
+
+---
+
 ## Notes
 
 - Focus on stability over new features
