@@ -21,6 +21,7 @@ export default function AIBuilderPage() {
     workflow,
     state,
     isLoading,
+    error,
     sendMessage,
     selectSuggestion,
     executeAction,
@@ -111,16 +112,21 @@ export default function AIBuilderPage() {
 
         <div className="flex items-center gap-3">
           {/* State indicator */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full">
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
+            state === 'error' ? 'bg-red-100' : 'bg-gray-100'
+          }`}>
             <div className={`w-2 h-2 rounded-full ${
               state === 'idle' ? 'bg-gray-400' :
               state === 'gathering' ? 'bg-yellow-400' :
               state === 'confirming' ? 'bg-blue-400' :
               state === 'refining' ? 'bg-orange-400' :
               state === 'deploying' ? 'bg-purple-400 animate-pulse' :
-              state === 'complete' ? 'bg-green-400' : 'bg-gray-400'
+              state === 'complete' ? 'bg-green-400' :
+              state === 'error' ? 'bg-red-500' : 'bg-gray-400'
             }`} />
-            <span className="text-sm font-medium text-gray-600 capitalize">{state}</span>
+            <span className={`text-sm font-medium capitalize ${
+              state === 'error' ? 'text-red-600' : 'text-gray-600'
+            }`}>{state}</span>
           </div>
 
           {/* Reset button */}
@@ -151,9 +157,11 @@ export default function AIBuilderPage() {
           <ChatPanel
             messages={messages}
             isLoading={isLoading}
+            error={error}
             onSendMessage={sendMessage}
             onSelectSuggestion={selectSuggestion}
             onExecuteAction={executeAction}
+            onRetry={reset}
           />
         </div>
 

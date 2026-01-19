@@ -8,7 +8,7 @@ import {
   AgentQuestion,
 } from '../services/ai-agent.service';
 
-export type ConversationState = 'idle' | 'gathering' | 'confirming' | 'refining' | 'deploying' | 'complete';
+export type ConversationState = 'idle' | 'gathering' | 'confirming' | 'refining' | 'deploying' | 'complete' | 'error';
 
 export interface Message {
   id: string;
