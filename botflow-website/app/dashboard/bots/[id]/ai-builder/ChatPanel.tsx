@@ -5,23 +5,31 @@ import { Message } from '../../../../hooks/useAIAgent';
 import { AgentAction } from '../../../../services/ai-agent.service';
 import { MessageBubble } from './MessageBubble';
 import { SuggestedActions } from './SuggestedActions';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+
+const MAX_MESSAGE_LENGTH = 2000;
 
 interface ChatPanelProps {
   messages: Message[];
   isLoading: boolean;
+  error?: string | null;
   onSendMessage: (message: string) => Promise<void>;
   onSelectSuggestion: (suggestion: string) => Promise<void>;
   onExecuteAction: (action: AgentAction) => Promise<void>;
+  onRetry?: () => void;
 }
 
 export function ChatPanel({
   messages,
   isLoading,
+  error,
   onSendMessage,
   onSelectSuggestion,
   onExecuteAction,
+  onRetry,
 }: ChatPanelProps) {
   const [input, setInput] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -35,12 +43,34 @@ export function ChatPanel({
     inputRef.current?.focus();
   }, []);
 
-  // Handle form submission
+  // Clear local error after 5 seconds
+  useEffect(() => {
+    if (localError) {
+      const timer = setTimeout(() => setLocalError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [localError]);
+
+  // Handle form submission with enhanced validation
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     const trimmedInput = input.trim();
-    if (!trimmedInput || isLoading) return;
 
+    // Enhanced validation
+    if (!trimmedInput) {
+      return; // Don't send empty messages
+    }
+
+    if (trimmedInput.length > MAX_MESSAGE_LENGTH) {
+      setLocalError(`Message too long. Please keep it under ${MAX_MESSAGE_LENGTH} characters.`);
+      return;
+    }
+
+    if (isLoading) {
+      return; // Don't send while loading
+    }
+
+    setLocalError(null);
     setInput('');
     await onSendMessage(trimmedInput);
   };
@@ -123,6 +153,38 @@ export function ChatPanel({
         />
       )}
 
+      {/* Error display */}
+      {(error || localError) && (
+        <div className="mx-4 mb-2 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-2 text-red-700">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <span className="text-sm">{error || localError}</span>
+          </div>
+          {onRetry && error && (
+            <button
+              onClick={onRetry}
+              className="flex items-center gap-1 px-3 py-1 text-sm bg-red-100 hover:bg-red-200 rounded text-red-700 transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Retry
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Loading state indicator */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-2 px-4 bg-gray-50 border-t border-gray-100">
+          <div className="flex items-center gap-2 text-gray-600">
+            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.25" />
+              <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <span className="text-sm">AI is thinking...</span>
+          </div>
+        </div>
+      )}
+
       {/* Input area */}
       <div className="p-4 border-t border-gray-200 bg-white">
         <form onSubmit={handleSubmit} className="flex items-end gap-3">
@@ -137,8 +199,13 @@ export function ChatPanel({
               rows={1}
               disabled={isLoading}
             />
-            <div className="absolute right-3 bottom-3 text-xs text-gray-400">
-              Enter to send
+            <div className="absolute right-3 bottom-3 flex items-center gap-2 text-xs text-gray-400">
+              {input.length > MAX_MESSAGE_LENGTH * 0.8 && (
+                <span className={input.length > MAX_MESSAGE_LENGTH ? 'text-red-500' : 'text-amber-500'}>
+                  {input.length}/{MAX_MESSAGE_LENGTH}
+                </span>
+              )}
+              <span>Enter to send</span>
             </div>
           </div>
           <button

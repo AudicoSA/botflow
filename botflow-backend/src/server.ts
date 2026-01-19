@@ -55,7 +55,7 @@ await fastify.register(cors, {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-ID'],
     exposedHeaders: ['Content-Length', 'X-Request-Id'],
 });
 
@@ -78,6 +78,29 @@ fastify.decorate('authenticate', async function (request: any, reply: any) {
         await request.jwtVerify();
     } catch (err) {
         reply.send(err);
+    }
+});
+
+// Request/response logging for AI agent routes
+fastify.addHook('onRequest', async (request, reply) => {
+    if (request.url.includes('/agent/')) {
+        fastify.log.info({
+            method: request.method,
+            url: request.url,
+            sessionId: request.headers['x-session-id'],
+            userAgent: request.headers['user-agent']
+        }, 'AI Agent request');
+    }
+});
+
+fastify.addHook('onResponse', async (request, reply) => {
+    if (request.url.includes('/agent/')) {
+        fastify.log.info({
+            method: request.method,
+            url: request.url,
+            statusCode: reply.statusCode,
+            responseTime: reply.elapsedTime
+        }, 'AI Agent response');
     }
 });
 
@@ -120,6 +143,7 @@ import analyticsRoutes from './routes/analytics.js';
 import analyticsWsRoutes from './routes/analytics-ws.js';
 import aiAgentRoutes from './routes/ai-agent.js';
 import workflowTemplatesRoutes from './routes/workflow-templates.js';
+import aiAgentHealthRoutes from './routes/ai-agent-health.js';
 
 // Register routes
 await fastify.register(healthRoutes, { prefix: '/health' });
@@ -144,6 +168,7 @@ await fastify.register(analyticsRoutes, { prefix: '/api/analytics' });
 await fastify.register(analyticsWsRoutes, { prefix: '/api/analytics' }); // WebSocket routes
 await fastify.register(aiAgentRoutes, { prefix: '/api/bots' }); // AI Agent endpoints (Phase 3)
 await fastify.register(workflowTemplatesRoutes, { prefix: '/api/workflow-templates' }); // Workflow Templates (Phase 3 Week 3)
+await fastify.register(aiAgentHealthRoutes, { prefix: '/api/agent' }); // AI Agent health and metrics (Phase 3 Week 5.2)
 
 // Start server
 const start = async () => {

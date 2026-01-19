@@ -44,6 +44,15 @@ interface UseAIAgentReturn {
 
 const SESSION_STORAGE_KEY = 'botflow_ai_session';
 
+// Generate unique message ID using crypto.randomUUID with fallback
+const generateMessageId = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+};
+
 export function useAIAgent(options: UseAIAgentOptions): UseAIAgentReturn {
   const { botId, onWorkflowGenerated, onDeployed, onError } = options;
 
@@ -53,31 +62,38 @@ export function useAIAgent(options: UseAIAgentOptions): UseAIAgentReturn {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const messageIdCounter = useRef(0);
-
-  // Generate unique message ID
-  const generateMessageId = useCallback(() => {
-    messageIdCounter.current += 1;
-    return `msg_${Date.now()}_${messageIdCounter.current}`;
-  }, []);
-
-  // Load session from localStorage on mount
+  // Load session from localStorage on mount with validation
   useEffect(() => {
-    const savedSession = localStorage.getItem(`${SESSION_STORAGE_KEY}_${botId}`);
-    if (savedSession) {
-      try {
-        const { sessionId: savedSessionId, messages: savedMessages, workflow: savedWorkflow, state: savedState } = JSON.parse(savedSession);
-        setSessionId(savedSessionId);
-        setMessages(savedMessages.map((m: Message) => ({ ...m, timestamp: new Date(m.timestamp) })));
-        setWorkflow(savedWorkflow);
-        setState(savedState);
-      } catch {
-        // Invalid saved session, start fresh
-        localStorage.removeItem(`${SESSION_STORAGE_KEY}_${botId}`);
+    const loadSession = async () => {
+      const savedSession = localStorage.getItem(`${SESSION_STORAGE_KEY}_${botId}`);
+      if (savedSession) {
+        try {
+          const { sessionId: savedSessionId, messages: savedMessages, workflow: savedWorkflow, state: savedState } = JSON.parse(savedSession);
+
+          // Validate session with backend before restoring
+          try {
+            const isValid = await aiAgentService.getSession(botId, savedSessionId);
+            if (isValid && isValid.sessionId) {
+              setSessionId(savedSessionId);
+              setMessages(savedMessages.map((m: Message) => ({ ...m, timestamp: new Date(m.timestamp) })));
+              setWorkflow(savedWorkflow);
+              setState(savedState);
+              setIsInitialized(true);
+              return;
+            }
+          } catch {
+            // Session invalid on backend, clear local storage
+            localStorage.removeItem(`${SESSION_STORAGE_KEY}_${botId}`);
+          }
+        } catch {
+          // Invalid saved session JSON, start fresh
+          localStorage.removeItem(`${SESSION_STORAGE_KEY}_${botId}`);
+        }
       }
-    } else {
-      // Add initial welcome message
+
+      // No valid session, show welcome message
       setMessages([{
         id: generateMessageId(),
         role: 'assistant',
@@ -90,8 +106,11 @@ export function useAIAgent(options: UseAIAgentOptions): UseAIAgentReturn {
           'Process payments',
         ],
       }]);
-    }
-  }, [botId, generateMessageId]);
+      setIsInitialized(true);
+    };
+
+    loadSession();
+  }, [botId]);
 
   // Save session to localStorage when it changes
   useEffect(() => {
@@ -115,7 +134,7 @@ export function useAIAgent(options: UseAIAgentOptions): UseAIAgentReturn {
     };
     setMessages((prev) => [...prev, message]);
     return message;
-  }, [generateMessageId]);
+  }, []);
 
   // Add assistant message to the conversation
   const addAssistantMessage = useCallback((
@@ -131,7 +150,7 @@ export function useAIAgent(options: UseAIAgentOptions): UseAIAgentReturn {
     };
     setMessages((prev) => [...prev, message]);
     return message;
-  }, [generateMessageId]);
+  }, []);
 
   // Send a message to the AI agent
   const sendMessage = useCallback(async (message: string) => {
@@ -225,6 +244,7 @@ export function useAIAgent(options: UseAIAgentOptions): UseAIAgentReturn {
     }]);
     setWorkflow(null);
     setState('idle');
+    setError(null);
 
     // Delete session on server if exists
     if (sessionId) {
@@ -233,26 +253,27 @@ export function useAIAgent(options: UseAIAgentOptions): UseAIAgentReturn {
 
     setSessionId(null);
     localStorage.removeItem(`${SESSION_STORAGE_KEY}_${botId}`);
-  }, [botId, sessionId, generateMessageId]);
+  }, [botId, sessionId]);
 
-  // Deploy the workflow
-  const deploy = useCallback(async () => {
+  // Deploy the workflow - fixed race condition by not changing state until API confirms
+  const deploy = useCallback(async (): Promise<boolean> => {
     if (!sessionId || !workflow) {
       setError('No workflow to deploy');
-      return;
+      return false;
     }
 
+    // Don't change state until we confirm API success
     setIsLoading(true);
     setError(null);
-    setState('deploying');
 
     try {
       const response = await aiAgentService.deploy(botId, sessionId, true);
 
       if (response.success) {
+        // Only transition state after confirmed success
         setState('complete');
         addAssistantMessage(
-          `Your workflow has been deployed and is now active! Customers can start using it right away.\n\nWhat would you like to do next?`,
+          `Your workflow has been deployed successfully!\n\nWorkflow ID: ${response.workflowId}\nStatus: ${response.status}\n\nWhat would you like to do next?`,
           {
             actions: [
               { type: 'modify', label: 'Make Changes' },
@@ -269,15 +290,17 @@ export function useAIAgent(options: UseAIAgentOptions): UseAIAgentReturn {
 
         // Clear saved session since we're complete
         localStorage.removeItem(`${SESSION_STORAGE_KEY}_${botId}`);
+        return true;
       } else {
-        throw new Error('Deploy failed');
+        addAssistantMessage(`Deployment failed: ${response.message || 'Unknown error'}. Please try again.`);
+        return false;
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to deploy workflow';
       setError(errorMessage);
-      setState('confirming');
       addAssistantMessage(`Sorry, I couldn't deploy the workflow: ${errorMessage}. Please try again.`);
       onError?.(err instanceof Error ? err : new Error(errorMessage));
+      return false;
     } finally {
       setIsLoading(false);
     }

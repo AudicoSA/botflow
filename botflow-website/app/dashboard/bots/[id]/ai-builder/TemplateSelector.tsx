@@ -80,6 +80,17 @@ export default function TemplateSelector({
     fetchCategories();
   }, []);
 
+  // Get auth headers for API calls
+  const getAuthHeaders = (): HeadersInit => {
+    const token = typeof window !== 'undefined'
+      ? localStorage.getItem('botflow_token') || sessionStorage.getItem('auth_token')
+      : null;
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+  };
+
   const fetchTemplates = async (category?: string, search?: string) => {
     try {
       setLoading(true);
@@ -90,10 +101,15 @@ export default function TemplateSelector({
 
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/workflow-templates?${params}`,
-        { credentials: 'include' }
+        {
+          credentials: 'include',
+          headers: getAuthHeaders()
+        }
       );
 
-      if (!res.ok) throw new Error('Failed to fetch templates');
+      if (!res.ok) {
+        throw new Error(`Failed to fetch templates: ${res.status}`);
+      }
 
       const data = await res.json();
       setTemplates(data.templates || []);
@@ -109,7 +125,10 @@ export default function TemplateSelector({
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/workflow-templates/categories`,
-        { credentials: 'include' }
+        {
+          credentials: 'include',
+          headers: getAuthHeaders()
+        }
       );
 
       if (!res.ok) return;

@@ -13,7 +13,13 @@
         "build": "tsc || true",
         "start": "node dist/server.js",
         "lint": "eslint src --ext .ts",
-        "test": "vitest"
+        "test": "vitest",
+        "test:ai-agent": "vitest run src/tests/ai-agent/",
+        "test:ai-agent:watch": "vitest src/tests/ai-agent/",
+        "test:e2e": "vitest run src/tests/ai-agent/e2e/",
+        "test:integration": "vitest run src/tests/ai-agent/integration/",
+        "test:frontend-scenarios": "vitest run src/tests/ai-agent/frontend-scenarios.test.ts",
+        "test:performance": "vitest run src/tests/ai-agent/performance/"
     },
     "keywords": [
         "whatsapp",
