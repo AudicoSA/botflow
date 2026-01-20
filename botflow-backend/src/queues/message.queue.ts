@@ -3,6 +3,7 @@ import redis from '../config/redis.js';
 import { logger } from '../config/logger.js';
 import { supabaseAdmin } from '../config/supabase.js';
 import { birdService } from '../services/bird.service.js';
+import { metaWhatsAppService } from '../services/meta-whatsapp.service.js';
 import OpenAI from 'openai';
 import { env } from '../config/env.js';
 import { loadTemplateConfig } from '../services/template-config.service.js';
@@ -200,25 +201,51 @@ const messageWorker = redis ? new Worker<MessageJob>(
                 .select()
                 .single();
 
-            // 15. Send via Bird WhatsApp
+            // 15. Send via WhatsApp (supports Bird and Meta)
             const { data: whatsappAccount } = await supabaseAdmin
                 .from('whatsapp_accounts')
                 .select('*')
                 .eq('id', whatsappAccountId)
                 .single();
 
-            if (whatsappAccount?.bird_channel_id) {
-                const birdResponse = await birdService.sendMessage({
-                    to: customerPhone,
-                    content: { text: aiResponse },
-                    channelId: whatsappAccount.bird_channel_id,
-                });
+            if (whatsappAccount) {
+                let messageId: string | null = null;
 
-                // Update message with Bird message ID
-                await supabaseAdmin
-                    .from('messages')
-                    .update({ bird_message_id: birdResponse.id, status: 'sent' })
-                    .eq('id', responseMessage.id);
+                // Send based on provider
+                if (whatsappAccount.provider === 'meta' && whatsappAccount.meta_phone_number_id && whatsappAccount.meta_access_token) {
+                    // Meta Cloud API
+                    try {
+                        const metaResponse = await metaWhatsAppService.sendMessage({
+                            phoneNumberId: whatsappAccount.meta_phone_number_id,
+                            accessToken: whatsappAccount.meta_access_token,
+                            to: customerPhone,
+                            message: aiResponse,
+                        });
+                        messageId = metaResponse.messages?.[0]?.id || null;
+                    } catch (metaError) {
+                        logger.error({ metaError, conversationId }, 'Failed to send via Meta');
+                    }
+                } else if (whatsappAccount.bird_channel_id) {
+                    // Bird API (legacy)
+                    try {
+                        const birdResponse = await birdService.sendMessage({
+                            to: customerPhone,
+                            content: { text: aiResponse },
+                            channelId: whatsappAccount.bird_channel_id,
+                        });
+                        messageId = birdResponse.id || null;
+                    } catch (birdError) {
+                        logger.error({ birdError, conversationId }, 'Failed to send via Bird');
+                    }
+                }
+
+                // Update message with provider message ID
+                if (messageId) {
+                    await supabaseAdmin
+                        .from('messages')
+                        .update({ bird_message_id: messageId, status: 'sent' })
+                        .eq('id', responseMessage.id);
+                }
             }
 
             // 16. Handle handoff if needed (NEW - Week 3)
@@ -497,24 +524,50 @@ Ask for their order number and provide status updates.`;
             .select()
             .single();
 
-        // Send via Bird WhatsApp
+        // Send via WhatsApp (supports Bird and Meta)
         const { data: whatsappAccount } = await supabaseAdmin
             .from('whatsapp_accounts')
             .select('*')
             .eq('id', whatsappAccountId)
             .single();
 
-        if (whatsappAccount?.bird_channel_id) {
-            const birdResponse = await birdService.sendMessage({
-                to: customerPhone,
-                content: { text: aiResponse },
-                channelId: whatsappAccount.bird_channel_id,
-            });
+        if (whatsappAccount) {
+            let messageId: string | null = null;
 
-            await supabaseAdmin
-                .from('messages')
-                .update({ bird_message_id: birdResponse.id, status: 'sent' })
-                .eq('id', responseMessage.id);
+            // Send based on provider
+            if (whatsappAccount.provider === 'meta' && whatsappAccount.meta_phone_number_id && whatsappAccount.meta_access_token) {
+                // Meta Cloud API
+                try {
+                    const metaResponse = await metaWhatsAppService.sendMessage({
+                        phoneNumberId: whatsappAccount.meta_phone_number_id,
+                        accessToken: whatsappAccount.meta_access_token,
+                        to: customerPhone,
+                        message: aiResponse,
+                    });
+                    messageId = metaResponse.messages?.[0]?.id || null;
+                } catch (metaError) {
+                    logger.error({ metaError, conversationId: conversation.id }, 'Failed to send generic AI response via Meta');
+                }
+            } else if (whatsappAccount.bird_channel_id) {
+                // Bird API (legacy)
+                try {
+                    const birdResponse = await birdService.sendMessage({
+                        to: customerPhone,
+                        content: { text: aiResponse },
+                        channelId: whatsappAccount.bird_channel_id,
+                    });
+                    messageId = birdResponse.id || null;
+                } catch (birdError) {
+                    logger.error({ birdError, conversationId: conversation.id }, 'Failed to send generic AI response via Bird');
+                }
+            }
+
+            if (messageId) {
+                await supabaseAdmin
+                    .from('messages')
+                    .update({ bird_message_id: messageId, status: 'sent' })
+                    .eq('id', responseMessage.id);
+            }
         }
 
         logger.info({ conversationId: conversation.id }, 'Generic AI message processed');

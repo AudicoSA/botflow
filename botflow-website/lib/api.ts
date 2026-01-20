@@ -141,10 +141,44 @@ class ApiClient {
         return this.request('/api/whatsapp/accounts');
     }
 
-    async connectWhatsApp(data: any) {
+    async getWhatsAppAccount(id: string) {
+        return this.request(`/api/whatsapp/accounts/${id}`);
+    }
+
+    async connectWhatsApp(data: {
+        accessToken: string;
+        phoneNumberId: string;
+        wabaId: string;
+        phoneNumber: string;
+        displayName?: string;
+        businessId?: string;
+    }) {
         return this.request('/api/whatsapp/connect', {
             method: 'POST',
             body: JSON.stringify(data),
+        });
+    }
+
+    async disconnectWhatsApp(accountId: string) {
+        return this.request(`/api/whatsapp/accounts/${accountId}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async testWhatsAppConnection(accountId: string) {
+        return this.request(`/api/whatsapp/test-connection/${accountId}`, {
+            method: 'POST',
+        });
+    }
+
+    async getEmbeddedSignupConfig() {
+        return this.request('/api/whatsapp/embedded-signup-url');
+    }
+
+    async sendWhatsAppMessage(accountId: string, to: string, message: string) {
+        return this.request('/api/whatsapp/send', {
+            method: 'POST',
+            body: JSON.stringify({ accountId, to, message }),
         });
     }
 

@@ -61,9 +61,11 @@ export default function DashboardLayout({
         { name: 'Dashboard', href: '/dashboard', icon: '📊' },
         { name: 'Bots', href: '/dashboard/bots', icon: '🤖' },
         { name: 'Templates', href: '/dashboard/templates', icon: '📋' },
+        { name: 'WhatsApp', href: '/dashboard/whatsapp', icon: '📱' },
         { name: 'Conversations', href: '/dashboard/conversations', icon: '💬' },
         { name: 'Analytics', href: '/dashboard/analytics', icon: '📈' },
         { name: 'Integrations', href: '/dashboard/integrations', icon: '🔌' },
+        { name: 'Billing', href: '/dashboard/billing', icon: '💳' },
         { name: 'Settings', href: '/dashboard/settings', icon: '⚙️' },
     ];
 

@@ -2,6 +2,8 @@ import { FastifyInstance } from 'fastify';
 import { logger } from '../config/logger.js';
 import { supabaseAdmin } from '../config/supabase.js';
 import { messageQueue } from '../queues/message.queue.js';
+import { env } from '../config/env.js';
+import { metaWhatsAppService, MetaWebhookPayload } from '../services/meta-whatsapp.service.js';
 
 export default async function webhookRoutes(fastify: FastifyInstance) {
     // Bird WhatsApp webhook
@@ -257,6 +259,183 @@ export default async function webhookRoutes(fastify: FastifyInstance) {
         } catch (error) {
             logger.error({ error }, 'Stripe webhook error');
             return reply.status(400).send({ error: 'Webhook processing failed' });
+        }
+    });
+
+    /**
+     * GET /webhooks/meta/whatsapp - Webhook verification
+     * Meta requires this endpoint to verify the webhook during setup
+     */
+    fastify.get('/meta/whatsapp', async (request, reply) => {
+        const query = request.query as {
+            'hub.mode'?: string;
+            'hub.verify_token'?: string;
+            'hub.challenge'?: string;
+        };
+
+        const mode = query['hub.mode'];
+        const token = query['hub.verify_token'];
+        const challenge = query['hub.challenge'];
+
+        logger.info({ mode, token: token ? '***' : undefined }, 'Meta webhook verification request');
+
+        // Check if mode and token are correct
+        if (mode === 'subscribe' && token === env.META_WEBHOOK_VERIFY_TOKEN) {
+            logger.info('Meta webhook verified successfully');
+            return reply.status(200).send(challenge);
+        }
+
+        logger.warn({ mode, tokenProvided: !!token }, 'Meta webhook verification failed');
+        return reply.status(403).send('Forbidden');
+    });
+
+    /**
+     * POST /webhooks/meta/whatsapp - Receive messages from Meta
+     * Handles incoming WhatsApp messages via Meta Cloud API
+     */
+    fastify.post('/meta/whatsapp', async (request, reply) => {
+        try {
+            const payload = request.body as MetaWebhookPayload;
+            logger.info({ object: payload.object }, 'Received Meta webhook');
+
+            // Verify webhook signature if app secret is configured
+            if (env.META_APP_SECRET) {
+                const signature = request.headers['x-hub-signature-256'] as string;
+                const rawBody = JSON.stringify(request.body);
+
+                if (!metaWhatsAppService.verifyWebhookSignature(signature, rawBody, env.META_APP_SECRET)) {
+                    logger.warn('Invalid Meta webhook signature');
+                    return reply.status(401).send({ error: 'Invalid signature' });
+                }
+            }
+
+            // Parse the webhook payload
+            const parsed = metaWhatsAppService.parseWebhookPayload(payload);
+
+            if (!parsed || parsed.messages.length === 0) {
+                // Might be a status update, acknowledge it
+                return { status: 'ok', message: 'No messages to process' };
+            }
+
+            const { phoneNumberId, messages } = parsed;
+
+            // Get WhatsApp account by phone_number_id
+            const { data: whatsappAccount } = await supabaseAdmin
+                .from('whatsapp_accounts')
+                .select('*')
+                .eq('meta_phone_number_id', phoneNumberId)
+                .eq('is_active', true)
+                .single();
+
+            if (!whatsappAccount) {
+                logger.warn({ phoneNumberId }, 'No WhatsApp account found for phone number ID');
+                return { status: 'ok', message: 'Unknown phone number' };
+            }
+
+            // Process each message
+            for (const msg of messages) {
+                const customerPhone = msg.from;
+                const messageContent = msg.content;
+                const contactName = msg.contactName || 'Unknown';
+
+                // Skip non-text messages for now (could be extended later)
+                if (msg.type !== 'text' && msg.type !== 'button' && msg.type !== 'interactive') {
+                    logger.info({ messageType: msg.type }, 'Skipping non-text message');
+                    continue;
+                }
+
+                // Find or create conversation
+                let { data: conversation } = await supabaseAdmin
+                    .from('conversations')
+                    .select('*')
+                    .eq('whatsapp_account_id', whatsappAccount.id)
+                    .eq('customer_phone', customerPhone)
+                    .eq('status', 'active')
+                    .single();
+
+                if (!conversation) {
+                    // Create new conversation
+                    const { data: newConversation } = await supabaseAdmin
+                        .from('conversations')
+                        .insert({
+                            organization_id: whatsappAccount.organization_id,
+                            whatsapp_account_id: whatsappAccount.id,
+                            customer_phone: customerPhone,
+                            customer_name: contactName,
+                            status: 'active',
+                        })
+                        .select()
+                        .single();
+
+                    conversation = newConversation;
+
+                    // Assign to active bot
+                    const { data: bot } = await supabaseAdmin
+                        .from('bots')
+                        .select('*')
+                        .eq('whatsapp_account_id', whatsappAccount.id)
+                        .eq('is_active', true)
+                        .limit(1)
+                        .single();
+
+                    if (bot) {
+                        await supabaseAdmin
+                            .from('conversations')
+                            .update({ bot_id: bot.id })
+                            .eq('id', conversation!.id);
+                    }
+                }
+
+                // Save incoming message
+                const { data: savedMessage } = await supabaseAdmin
+                    .from('messages')
+                    .insert({
+                        conversation_id: conversation!.id,
+                        bird_message_id: msg.messageId, // Reusing this column for Meta message ID
+                        direction: 'inbound',
+                        message_type: 'text',
+                        content: messageContent,
+                        status: 'delivered',
+                        metadata: {
+                            provider: 'meta',
+                            original_type: msg.type,
+                        },
+                    })
+                    .select()
+                    .single();
+
+                // Mark message as read (best effort)
+                if (whatsappAccount.meta_access_token) {
+                    metaWhatsAppService.markAsRead(
+                        phoneNumberId,
+                        whatsappAccount.meta_access_token,
+                        msg.messageId
+                    ).catch(err => logger.warn({ err }, 'Failed to mark message as read'));
+                }
+
+                // Queue message for AI processing
+                try {
+                    if (messageQueue) {
+                        await messageQueue.add('process-message', {
+                            conversationId: conversation!.id,
+                            messageId: savedMessage!.id,
+                            customerPhone,
+                            messageContent,
+                            whatsappAccountId: whatsappAccount.id,
+                        });
+                        logger.info({ conversationId: conversation!.id }, 'Meta message queued for processing');
+                    } else {
+                        logger.warn({ conversationId: conversation!.id }, 'Message queue not available (Redis down). Message saved but AI will not reply.');
+                    }
+                } catch (queueError) {
+                    logger.warn({ error: queueError, conversationId: conversation!.id }, 'Failed to queue Meta message');
+                }
+            }
+
+            return { status: 'ok' };
+        } catch (error) {
+            logger.error({ error }, 'Meta webhook processing error');
+            return reply.status(500).send({ error: 'Webhook processing failed' });
         }
     });
 }
