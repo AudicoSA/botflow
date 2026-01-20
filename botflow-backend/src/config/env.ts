@@ -33,9 +33,13 @@ const envSchema = z.object({
     ANTHROPIC_API_KEY: z.string().optional(),
 
     // Redis (optional - only needed for message queue)
+    // Option 1: Use REDIS_URL (recommended for Upstash)
+    REDIS_URL: z.string().optional(),
+    // Option 2: Use individual settings
     REDIS_HOST: z.string().optional(),
     REDIS_PORT: z.string().optional(),
     REDIS_PASSWORD: z.string().optional(),
+    REDIS_TLS: z.string().optional().transform(val => val === 'true'),
 
     // n8n
     N8N_API_URL: z.string().url().optional(),
