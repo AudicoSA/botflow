@@ -81,28 +81,6 @@ fastify.decorate('authenticate', async function (request: any, reply: any) {
     }
 });
 
-// Request/response logging for AI agent routes
-fastify.addHook('onRequest', async (request, reply) => {
-    if (request.url.includes('/agent/')) {
-        fastify.log.info({
-            method: request.method,
-            url: request.url,
-            sessionId: request.headers['x-session-id'],
-            userAgent: request.headers['user-agent']
-        }, 'AI Agent request');
-    }
-});
-
-fastify.addHook('onResponse', async (request, reply) => {
-    if (request.url.includes('/agent/')) {
-        fastify.log.info({
-            method: request.method,
-            url: request.url,
-            statusCode: reply.statusCode,
-            responseTime: reply.elapsedTime
-        }, 'AI Agent response');
-    }
-});
 
 // Global error handler
 fastify.setErrorHandler((error, request, reply) => {
@@ -141,9 +119,7 @@ import ralphRoutes from './routes/ralph.js';
 import botBuilderRoutes from './routes/bot-builder.js';
 import analyticsRoutes from './routes/analytics.js';
 import analyticsWsRoutes from './routes/analytics-ws.js';
-import aiAgentRoutes from './routes/ai-agent.js';
-import workflowTemplatesRoutes from './routes/workflow-templates.js';
-import aiAgentHealthRoutes from './routes/ai-agent-health.js';
+// Phase 3 AI Builder routes archived - see _archived/phase3-ai-builder/
 
 // Register routes
 await fastify.register(healthRoutes, { prefix: '/health' });
@@ -166,9 +142,7 @@ await fastify.register(webhookRoutes, { prefix: '/webhooks' });
 await fastify.register(ralphRoutes, { prefix: '/api/ralph' });
 await fastify.register(analyticsRoutes, { prefix: '/api/analytics' });
 await fastify.register(analyticsWsRoutes, { prefix: '/api/analytics' }); // WebSocket routes
-await fastify.register(aiAgentRoutes, { prefix: '/api/bots' }); // AI Agent endpoints (Phase 3)
-await fastify.register(workflowTemplatesRoutes, { prefix: '/api/workflow-templates' }); // Workflow Templates (Phase 3 Week 3)
-await fastify.register(aiAgentHealthRoutes, { prefix: '/api/agent' }); // AI Agent health and metrics (Phase 3 Week 5.2)
+// Phase 3 routes removed - archived in _archived/phase3-ai-builder/
 
 // Start server
 const start = async () => {

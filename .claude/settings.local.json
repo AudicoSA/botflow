@@ -47,10 +47,14 @@
       "Bash(npx vercel@latest:*)",
       "Bash(git fetch:*)",
       "Bash(xargs:*)",
-      "Read(//c/Users/kenny/Downloads/**)"
+      "Read(//c/Users/kenny/Downloads/**)",
+      "Bash(cd:*)",
+      "Bash(grep:*)",
+      "Bash(botflow-website/app/dashboard/bots/[id]/page.tsx)"
     ],
     "additionalDirectories": [
-      "\\tmp"
+      "\\tmp",
+      "c:\\Users\\kenny\\OneDrive\\Whatsapp Service\\botflow-backend\\src\\services\\ai-agent"
     ]
   }
 }

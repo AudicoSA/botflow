@@ -78,7 +78,7 @@ The application uses Supabase (PostgreSQL) with 13 main tables:
 - `organization_members` - Team membership and roles
 - `whatsapp_accounts` - Connected WhatsApp Business numbers
 - `bots` - AI bot configurations (booking, FAQ, order_tracking types)
-- `bot_workflows` - Visual workflow definitions (React Flow nodes/edges)
+- `bot_workflows` - Bot workflow definitions (JSONB)
 - `conversations` - Customer conversation threads
 - `messages` - All inbound/outbound messages
 - `conversation_context` - AI memory and embeddings (pgvector)
@@ -510,11 +510,6 @@ npm run test
 3. Register in `src/server.ts` with appropriate prefix
 4. Add authentication via `onRequest: [fastify.authenticate]` if needed
 
-### Adding a new bot workflow node type:
-1. Define type in bot workflow schema
-2. Update workflow execution logic in message queue worker
-3. Add UI component in frontend bot builder
-
 ### Adding a new WhatsApp message template:
 1. Create template in Bird/Twilio dashboard
 2. Get approval from WhatsApp
@@ -635,267 +630,72 @@ Current status is tracked in [STATUS.md](./STATUS.md). The project has:
 - Message queue with AI-powered responses
 
 Key remaining work:
-- Full dashboard UI implementation
-- Visual bot builder with React Flow
-- Advanced analytics
+- Full dashboard UI polish
 - Billing integration completion
+- Get first 5 paying customers
 
 ---
 
-## Phase 2: Intelligent Bot Factory ✅ (97% Complete)
+## Core Design Philosophy
 
-**Goal:** Transform BotFlow from a template deployer into an intelligent, dynamic workflow factory that builds custom solutions automatically.
+From `BOTFLOW_SYSTEM_WORKFLOW.md`:
 
-### Phase 2 Progress Summary (Week 8)
-```
-Week 1: Knowledge Base & RAG      [████████████] 100% ✅
-Week 2: Workflow Engine           [████████████] 100% ✅
-Week 3: Intelligent Bot Builder   [████████████] 100% ✅
-Week 4: Visual Builder UI         [████████████] 100% ✅
-Week 5: Analytics Dashboard       [████████████] 100% ✅
-Week 6: Production Deployment     [████████████] 100% ✅
-Week 7: Marketplace Backend       [████████████] 100% ✅
-Week 8: Frontend & Testing        [████████████]  97% 🔧
+> "Users **configure behavior**, they do **not build flows**."
+>
+> "BotFlow should feel like configuring a smart employee — not programming one."
 
-Overall Progress:                 [████████████]  97%
-```
+**Two Tiers of Automation:**
+| Tier | Who | How |
+|------|-----|-----|
+| Standard | 90% of clients | Templates + Rules Engine |
+| Premium | Power users | n8n / custom workflows (paid add-on) |
 
-### Core Technologies
-- **pgvector**: PostgreSQL native vector search (no external vector DB needed!)
-- **OpenAI Embeddings**: text-embedding-3-small (1536 dimensions)
-- **React Flow**: Visual workflow builder for drag-and-drop bot design
-- **n8n**: Workflow automation for document processing
-- **RAG**: Retrieval-Augmented Generation for knowledge-based responses
-- **Recharts**: Analytics dashboard visualizations
+**Explicit Non-Goals:**
+- User-built workflows
+- Arbitrary scripting
+- Device-based WhatsApp
 
-### Phase 2 Features
+---
 
-#### Knowledge Base & RAG (Week 1) ✅
-- pgvector extension enabled in Supabase PostgreSQL
-- Support for PDF, URL, and plain text sources
-- Vector similarity search with cosine distance
-- Hybrid search combining vector + keyword matching
-- Automatic embedding generation via OpenAI
+## Knowledge Base & RAG
+
+Users can upload documents to enhance their bot's responses:
+- PDF upload and processing
+- URL content extraction
+- Plain text FAQ entries
+- Vector similarity search (pgvector)
 - RAG context injection into AI responses
 
 **Key Files:**
 - `botflow-backend/src/routes/knowledge.ts` - API endpoints
 - `botflow-backend/src/services/knowledge-search.ts` - Search service
-- `botflow-backend/src/services/pdf-processor.service.ts` - PDF processing
 - `botflow-website/app/dashboard/bots/[id]/KnowledgeBaseTab.tsx` - Frontend UI
 
-#### Visual Workflow Builder (Week 4) ✅
-- React Flow-based drag-and-drop builder
-- 4 node types: Trigger, Action, Condition, Integration
-- Node configuration panels for each type
-- Workflow save/load to database (JSONB)
-- Dynamic integration nodes from marketplace
-
-**Key Files:**
-- `botflow-website/app/dashboard/bots/[id]/workflow/page.tsx` - Builder page
-- `botflow-website/app/dashboard/bots/[id]/workflow/CustomNodes.tsx` - Node components
-- `botflow-website/app/dashboard/bots/[id]/workflow/NodePalette.tsx` - Node sidebar
-- `botflow-website/app/dashboard/bots/[id]/workflow/NodeConfigPanel.tsx` - Configuration
-
-#### Analytics Dashboard (Week 5) ✅
-- Real-time metrics via WebSocket streaming
-- Response time charts (p50, p95, average)
-- Message volume charts (inbound/outbound)
-- CSV export functionality
-- Bot-specific performance metrics
-
-**Key Files:**
-- `botflow-backend/src/routes/analytics.ts` - API endpoints
-- `botflow-backend/src/routes/analytics-ws.ts` - WebSocket streaming
-- `botflow-backend/src/services/metrics.service.ts` - Metrics aggregation
-- `botflow-website/app/dashboard/analytics/` - Dashboard pages
-- `botflow-website/app/components/analytics/` - Chart components
-
-#### Integration Marketplace (Week 7-8) ✅
-- 130+ integrations across 12 categories
-- Dynamic credential forms via `credential_schema` JSONB
-- Credential validation for 11+ providers
-- Bot-specific integration management
-- South African payment gateways (PayFast, Yoco, iKhokha)
-
-**Key Files:**
-- `botflow-backend/src/routes/marketplace.ts` - API endpoints
-- `botflow-backend/src/services/credential-validator.service.ts` - Validation
-- `botflow-website/app/components/EnableIntegrationModal.tsx` - Enable modal
-- `botflow-website/app/dashboard/marketplace/page.tsx` - Marketplace page
-
-### Phase 2 API Endpoints
-
-**Knowledge Base:**
+**API Endpoints:**
 - `GET /api/bots/:botId/knowledge` - List knowledge sources
 - `POST /api/bots/:botId/knowledge` - Initialize file upload
 - `POST /api/bots/:botId/knowledge/source` - Add URL or text source
-- `POST /api/bots/:botId/knowledge/:articleId/process` - Trigger processing
-- `POST /api/bots/:botId/knowledge/search` - Vector similarity search
-- `GET /api/bots/:botId/knowledge/stats` - Get statistics
 - `DELETE /api/bots/:botId/knowledge/:articleId` - Delete source
 
-**Analytics:**
-- `GET /api/analytics/realtime` - Real-time organization metrics
-- `GET /api/analytics/response-times?period=24h|7d|30d` - Response time trends
-- `GET /api/analytics/message-volume?period=24h|7d|30d` - Message volume
-- `GET /api/analytics/bot/:botId/performance` - Bot performance summary
-- `GET /api/analytics/export` - CSV export
-- `GET /api/analytics/stream` - WebSocket real-time updates
+---
 
-**Workflow:**
-- `PATCH /api/bots/:id` - Save workflow (nodes/edges as JSONB)
+## Analytics
 
-### Database Schema (Phase 2)
-- `knowledge_base_articles` - Document metadata and status
-- `knowledge_embeddings` - Vector embeddings with pgvector (1536 dimensions)
-- `conversation_metrics` - Per-conversation analytics
-- `bot_performance_metrics` - Daily bot aggregates
-- `usage_analytics` - Hourly organization metrics
-- `integration_marketplace` - Available integrations catalog
-- `bot_integrations` - Per-bot enabled integrations
+Basic analytics for bot performance:
+- Message volume (inbound/outbound)
+- Response times
+- Bot-specific metrics
 
-### Phase 2 Documentation
-- [PHASE2_SCHEDULE.md](./PHASE2_SCHEDULE.md) - 6-week roadmap
-- [PHASE2_WEEK8.4_GUIDE.md](./PHASE2_WEEK8.4_GUIDE.md) - Current status and remaining tasks
-- [PHASE2_PROGRESS.md](./PHASE2_PROGRESS.md) - Progress tracker
+**Key Files:**
+- `botflow-backend/src/routes/analytics.ts` - API endpoints
+- `botflow-website/app/dashboard/analytics/` - Dashboard pages
 
 ---
 
-## Phase 3: AI-Powered Workflow Builder Agent (In Progress)
+## Archived Code
 
-**Goal:** Transform the workflow builder from drag-and-drop into a conversational AI interface where users describe what they want and the agent builds it automatically.
+Phase 3 (AI-Powered Workflow Builder) was archived as it contradicted the core design philosophy. Code is preserved in `_archived/phase3-ai-builder/` if needed in the future.
 
-### Phase 3 Progress Summary
-```
-Week 1: Agent Foundation           [████████████] 100% ✅
-Week 2: Conversation System        [████████████] 100% ✅
-Week 3: Template System            [████████████] 100% ✅
-Week 4: Frontend Integration       [            ]   0%
-Week 5: Intelligence Enhancement   [            ]   0%
-Week 6: Testing & Polish           [            ]   0%
-
-Overall Progress:                  [██████      ]  50%
-```
-
-### Core Components
-
-**Intent Parser** (`src/services/ai-agent/intent-parser.ts`)
-- GPT-4o powered natural language understanding
-- Entity extraction (services, actions, data, conditions)
-- Integration detection for SA services (PayFast, Yoco, Shopify, etc.)
-- Workflow type detection (order_tracking, booking, faq, payment, etc.)
-- Confidence scoring with clarification questions
-- Quick detection for common commands
-
-**Context Manager** (`src/services/ai-agent/context-manager.ts`)
-- Session management with Redis caching support
-- State machine: idle → gathering → confirming → refining → deploying → complete
-- Message history with sliding window (50 messages max)
-- Requirement gathering and tracking
-- Workflow versioning for undo functionality
-- User preferences and available integrations
-
-**Workflow Generator** (`src/services/ai-agent/workflow-generator.ts`)
-- GPT-4o powered Blueprint JSON generation
-- Intent-to-workflow conversion
-- Workflow refinement from natural language modifications
-- Auto-fix for common validation issues
-- Confidence scoring
-- Natural language explanation generation
-
-**Conversation Engine** (`src/services/ai-agent/conversation-engine.ts`)
-- Main orchestrator for the AI agent
-- State-based conversation routing
-- Contextual response generation
-- Quick command handling (help, undo, deploy, reset)
-- South African context awareness
-- Template suggestion integration (Week 3)
-
-**Template Library** (`src/services/ai-agent/template-library.ts`) - Week 3
-
-- CRUD operations for workflow templates
-- Template search and filtering by category/vertical
-- Recommended templates based on bot context
-- Usage tracking and analytics
-- Bulk upsert for seeding templates
-
-**Template Matcher** (`src/services/ai-agent/template-matcher.ts`) - Week 3
-
-- Intent-to-template matching with weighted scoring algorithm
-- Factors: keywords (30%), intent type (25%), integrations (25%), vertical (15%), popularity (5%)
-- Template customization with variable substitution
-- Validation of required variables and configurations
-
-### Phase 3 API Endpoints
-
-**AI Agent:**
-
-- `POST /api/bots/:botId/agent/chat` - Conversational workflow building
-- `POST /api/bots/:botId/agent/generate` - Direct workflow generation
-- `POST /api/bots/:botId/agent/refine` - Refine existing workflow
-- `POST /api/bots/:botId/agent/deploy` - Deploy workflow to bot
-- `GET /api/bots/:botId/agent/session` - Get session info
-- `DELETE /api/bots/:botId/agent/session/:sessionId` - Delete session
-- `GET /api/bots/:botId/agent/explain` - Get workflow explanation
-- `GET /api/bots/:botId/agent/stats` - Get usage statistics
-
-**Workflow Templates (Week 3):**
-
-- `GET /api/workflow-templates` - List all templates (with filtering)
-- `GET /api/workflow-templates/:slug` - Get template by slug
-- `GET /api/workflow-templates/categories` - Get all categories with counts
-- `GET /api/workflow-templates/search?q=query` - Search templates
-- `GET /api/workflow-templates/category/:category` - Filter by category
-- `GET /api/workflow-templates/recommended/:botId` - Get recommended templates for bot
-- `POST /api/workflow-templates/match` - Match templates to natural language
-- `POST /api/workflow-templates/:slug/instantiate` - Create workflow from template
-- `POST /api/workflow-templates/:slug/preview` - Preview template instantiation
-- `POST /api/workflow-templates/usage/:usageId/rate` - Rate a template usage
-- `GET /api/workflow-templates/stats` - Get template statistics
-
-### Example: Conversational Workflow Building
-
-```bash
-# Start conversation
-curl -X POST http://localhost:3001/api/bots/:botId/agent/chat \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"message": "I want customers to track their orders from my Shopify store"}'
-
-# Response includes:
-# - Clarifying questions
-# - Session ID for continuation
-# - Suggested quick replies
-
-# Continue conversation
-curl -X POST http://localhost:3001/api/bots/:botId/agent/chat \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"sessionId": "uuid", "message": "They should enter their order number"}'
-
-# When ready, deploy
-curl -X POST http://localhost:3001/api/bots/:botId/agent/chat \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"sessionId": "uuid", "message": "deploy"}'
-```
-
-### Key Files
-
-- `botflow-backend/src/types/ai-agent.ts` - Type definitions (40+ types)
-- `botflow-backend/src/services/ai-agent/` - Service implementations
-- `botflow-backend/src/routes/ai-agent.ts` - API endpoints
-- `botflow-backend/src/routes/workflow-templates.ts` - Template API endpoints (Week 3)
-- `botflow-backend/src/services/ai-agent/template-library.ts` - Template CRUD service (Week 3)
-- `botflow-backend/src/services/ai-agent/template-matcher.ts` - Template matching service (Week 3)
-- `botflow-backend/src/data/workflow-templates/` - Template JSON files (12 templates)
-- `botflow-backend/src/scripts/seed-workflow-templates.ts` - Template seeding script
-- `botflow-backend/src/migrations/003_workflow_templates.sql` - Database migration
-- `botflow-website/app/dashboard/bots/[id]/ai-builder/TemplateSelector.tsx` - Template UI
-- [PHASE3_PLAN.md](./PHASE3_PLAN.md) - Full implementation plan
-- [PHASE3_WEEK3_PLAN.md](./PHASE3_WEEK3_PLAN.md) - Week 3 template system plan
+See `_archived/phase3-ai-builder/README.md` for details.
 
 ---
-
-
