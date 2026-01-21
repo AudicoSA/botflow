@@ -31,15 +31,17 @@ export default async function whatsappRoutes(fastify: FastifyInstance) {
     }, async (request, reply) => {
         try {
             const user = request.user as any;
+            const userId = user.userId || user.id; // Support both JWT formats
 
             // Get user's organization
             const { data: member } = await supabaseAdmin
                 .from('organization_members')
                 .select('organization_id')
-                .eq('user_id', user.id)
+                .eq('user_id', userId)
                 .single();
 
             if (!member) {
+                logger.warn({ userId }, 'No organization found for user');
                 return reply.status(403).send({ error: 'No organization found' });
             }
 
@@ -72,12 +74,13 @@ export default async function whatsappRoutes(fastify: FastifyInstance) {
         try {
             const { id } = request.params as { id: string };
             const user = request.user as any;
+            const userId = user.userId || user.id;
 
             // Get user's organization
             const { data: member } = await supabaseAdmin
                 .from('organization_members')
                 .select('organization_id')
-                .eq('user_id', user.id)
+                .eq('user_id', userId)
                 .single();
 
             if (!member) {
@@ -112,13 +115,14 @@ export default async function whatsappRoutes(fastify: FastifyInstance) {
     }, async (request, reply) => {
         try {
             const user = request.user as any;
+            const userId = user.userId || user.id;
             const body = connectMetaSchema.parse(request.body);
 
             // Get user's organization
             const { data: member } = await supabaseAdmin
                 .from('organization_members')
                 .select('organization_id')
-                .eq('user_id', user.id)
+                .eq('user_id', userId)
                 .single();
 
             if (!member) {
@@ -203,12 +207,13 @@ export default async function whatsappRoutes(fastify: FastifyInstance) {
         try {
             const { id } = request.params as { id: string };
             const user = request.user as any;
+            const userId = user.userId || user.id;
 
             // Get user's organization
             const { data: member } = await supabaseAdmin
                 .from('organization_members')
                 .select('organization_id')
-                .eq('user_id', user.id)
+                .eq('user_id', userId)
                 .single();
 
             if (!member) {
@@ -284,10 +289,11 @@ export default async function whatsappRoutes(fastify: FastifyInstance) {
             }
 
             const user = request.user as any;
+            const userId = user.userId || user.id;
 
             // Generate a state token for security (CSRF protection)
             const stateToken = Buffer.from(JSON.stringify({
-                userId: user.id,
+                userId: userId,
                 timestamp: Date.now(),
                 random: Math.random().toString(36).substring(2),
             })).toString('base64');
@@ -318,13 +324,14 @@ export default async function whatsappRoutes(fastify: FastifyInstance) {
     }, async (request, reply) => {
         try {
             const user = request.user as any;
+            const userId = user.userId || user.id;
             const body = sendMessageSchema.parse(request.body);
 
             // Get user's organization
             const { data: member } = await supabaseAdmin
                 .from('organization_members')
                 .select('organization_id')
-                .eq('user_id', user.id)
+                .eq('user_id', userId)
                 .single();
 
             if (!member) {
@@ -385,12 +392,13 @@ export default async function whatsappRoutes(fastify: FastifyInstance) {
         try {
             const { id } = request.params as { id: string };
             const user = request.user as any;
+            const userId = user.userId || user.id;
 
             // Get user's organization
             const { data: member } = await supabaseAdmin
                 .from('organization_members')
                 .select('organization_id')
-                .eq('user_id', user.id)
+                .eq('user_id', userId)
                 .single();
 
             if (!member) {
