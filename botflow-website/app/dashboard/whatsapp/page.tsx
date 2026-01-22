@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
-import WhatsAppEmbeddedSignup from '@/app/components/WhatsAppEmbeddedSignup';
+import WhatsAppOnboardingWizard from '@/app/components/WhatsAppOnboardingWizard';
 
 interface WhatsAppAccount {
     id: string;
@@ -233,7 +233,7 @@ export default function WhatsAppPage() {
                         </div>
                         <h3 className="font-semibold text-gray-900 mb-1">Connect</h3>
                         <p className="text-sm text-gray-600">
-                            Click "Connect WhatsApp" and follow the Meta signup flow to link your business number.
+                            Click "Connect WhatsApp" and follow the step-by-step guide to link your business number.
                         </p>
                     </div>
                     <div className="text-center">
@@ -257,9 +257,30 @@ export default function WhatsAppPage() {
                 </div>
             </div>
 
-            {/* Embedded Signup Modal */}
+            {/* Need Help Section */}
+            <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <h2 className="text-lg font-semibold mb-1">Need help connecting?</h2>
+                        <p className="text-green-100 text-sm">
+                            Our team can set up WhatsApp for you - free for Starter plan and above.
+                        </p>
+                    </div>
+                    <a
+                        href="mailto:support@botflow.co.za?subject=Help%20connecting%20WhatsApp&body=Hi!%20I%20need%20help%20connecting%20my%20WhatsApp%20Business%20to%20BotFlow."
+                        className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-green-600 rounded-lg font-semibold hover:bg-green-50 transition-colors whitespace-nowrap"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        Email Support
+                    </a>
+                </div>
+            </div>
+
+            {/* Onboarding Wizard Modal */}
             {showSignup && (
-                <WhatsAppEmbeddedSignup
+                <WhatsAppOnboardingWizard
                     onSuccess={handleSignupSuccess}
                     onClose={() => setShowSignup(false)}
                 />
